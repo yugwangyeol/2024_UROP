@@ -5,7 +5,9 @@ from transformers import Wav2Vec2Model
 import wandb  # wandb 추가
 
 # wandb 초기화
+
 wandb.init(project="noise_DAE_project")
+
 
 def cosine_similarity_loss(x, y):
     cos_sim = F.cosine_similarity(x, y)
