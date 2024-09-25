@@ -16,7 +16,8 @@ if not os.path.exists(save_dir):
     os.makedirs(save_dir)
 
 # 하이퍼파라미터
-batch_size = 8
+
+batch_size = 4
 num_epochs = 10
 learning_rate = 0.001
 lambda_emb = 0.05

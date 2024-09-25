@@ -4,14 +4,26 @@ import torch.nn as nn
 class NoiseEncoder(nn.Module):
     def __init__(self):
         super(NoiseEncoder, self).__init__()
-        self.conv1 = nn.Conv1d(1, 64, kernel_size=3, padding=1)  # 입력: [batch_size, 1, time]
-        self.conv2 = nn.Conv1d(64, 64, kernel_size=3, padding=1)  # 출력: [batch_size, 64, time]
-        self.conv3 = nn.Conv1d(64, 1, kernel_size=3, padding=1)  # 출력: [batch_size, 1, time]
-        self.relu = nn.ReLU()
-        self.tanh = nn.Tanh()
+        # 인코더
+        self.encoder = nn.Sequential(
+            nn.Conv1d(1, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(64, 128, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(128, 256, kernel_size=3, padding=1),
+            nn.ReLU(),
+        )
+        # 디코더
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose1d(256, 128, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose1d(128, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose1d(64, 1, kernel_size=3, padding=1),
+            nn.Tanh()
+        )
 
     def forward(self, x):
-        x = self.relu(self.conv1(x))  # [batch_size, 64, time]
-        x = self.relu(self.conv2(x))
-        x = self.tanh(self.conv3(x))
-        return x
+        encoded = self.encoder(x)
+        decoded = self.decoder(encoded)
+        return decoded
