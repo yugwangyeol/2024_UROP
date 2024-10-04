@@ -25,8 +25,14 @@ waveform, sample_rate = torchaudio.load(input_wav_path)
 waveform = waveform.unsqueeze(0).to(device)  # [1, num_channels, num_samples]
 
 # 3. 노이즈 적용
+
+#with torch.no_grad():
+#    noise = noise_encoder(waveform).to(device)  # [1, num_channels, num_samples]
+#    noisy_waveform = torch.clamp(waveform + noise, -1, 1)  # [-1, 1] 범위로 클램핑
 with torch.no_grad():
-    noise = noise_encoder(waveform).to(device)  # [1, num_channels, num_samples]
+    noise_level = 0.05  # 노이즈의 강도 (0에 가까울수록 노이즈가 적고, 값이 클수록 노이즈가 강해짐)
+    # waveform의 크기와 동일한 랜덤 노이즈 생성
+    noise = noise_level * torch.randn_like(waveform).to(device)  # 노이즈의 강도 조절
     noisy_waveform = torch.clamp(waveform + noise, -1, 1)  # [-1, 1] 범위로 클램핑
 
 # 4. 노이즈가 적용된 wav 파일 저장
