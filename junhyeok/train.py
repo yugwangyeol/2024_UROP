@@ -5,7 +5,9 @@ from transformers import Wav2Vec2Model
 import wandb  # wandb 추가
 
 # wandb 초기화
+
 wandb.init(project="noise_DAE_project")
+
 
 def cosine_similarity_loss(x, y):
     cos_sim = F.cosine_similarity(x, y)
@@ -43,11 +45,13 @@ def train_noise_encoder(noise_encoder, wav2vec2, dataloader, optimizer, num_epoc
 
             # Loss 계산
             img_loss = torch.nn.functional.mse_loss(noisy_waveforms, waveforms.unsqueeze(1)).to(device)
+
             # 두 임베딩 간의 L2 distance 계산
             l2_distance = torch.norm(wav2vec2_noisy_output - wav2vec2_original_output, p=2, dim=-1)
             # L2 distance를 최대화하려면 음수로 반전하여 loss로 사용
             emb_loss = -torch.mean(l2_distance).to(device)
             
+
             total_loss = lambda_img * img_loss + lambda_emb * emb_loss
 
             # 역전파 및 최적화

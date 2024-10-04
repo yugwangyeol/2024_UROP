@@ -2,8 +2,10 @@
 import torch
 import torchaudio
 from torch.utils.data import DataLoader
-# from transformers import HubertModel, Wav2Vec2Processor
+
+
 from transformers import WavLMModel
+
 from models import NoiseEncoder
 from train import train_noise_encoder
 import wandb
@@ -17,6 +19,7 @@ if not os.path.exists(save_dir):
     os.makedirs(save_dir)
 
 # 하이퍼파라미터
+
 batch_size = 4
 num_epochs = 10
 learning_rate = 0.001
@@ -36,6 +39,7 @@ def collate_fn(batch):
         waveforms.append(waveform)
     return torch.stack(waveforms)
 
+
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
 # HuBERT 모델과 프로세서 초기화
@@ -45,6 +49,7 @@ train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, co
 # WavLM 모델을 불러와서 장치에 올리는 코드
 wavlm = WavLMModel.from_pretrained("microsoft/wavlm-large").to(device)
 
+
 # NoiseEncoder 모델 초기화
 noise_encoder = NoiseEncoder().to(device)
 
@@ -53,7 +58,9 @@ optimizer = torch.optim.Adam(noise_encoder.parameters(), lr=learning_rate)
 
 # 학습 실행
 img_losses, emb_losses, total_losses = train_noise_encoder(noise_encoder,
+
                                                             wavlm,
+
                                                             train_loader, 
                                                             optimizer, 
                                                             num_epochs, 
