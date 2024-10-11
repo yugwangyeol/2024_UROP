@@ -8,11 +8,6 @@ import wandb  # wandb 추가
 
 wandb.init(project="noise_DAE_project")
 
-
-def cosine_similarity_loss(x, y):
-    cos_sim = F.cosine_similarity(x, y)
-    return cos_sim.mean()
-
 def transform_data(waveform, device):
     # waveform의 차원 [batch_size, num_channels, sequence_length]으로 변환
     return waveform.squeeze(1).to(device)  # [batch_size, sequence_length]
