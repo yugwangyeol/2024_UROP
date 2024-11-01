@@ -1,12 +1,11 @@
-# main.py
 import torch
 import torchaudio
 from torch.utils.data import DataLoader
-from transformers import HubertModel, Wav2Vec2Processor
-from models import NoiseEncoder
+from transformers import WavLMModel
+from models import Discriminator, Generator
 from train import train_noise_encoder
-import wandb
 import os
+
 # 장치 설정
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -19,11 +18,12 @@ if not os.path.exists(save_dir):
 batch_size = 4
 num_epochs = 10
 learning_rate = 0.001
-lambda_emb = 0.05
-lambda_img = 0.95
+lambda_centroid = 0.2
+lambda_wav = 0.8
+lambda_gan = 0.5
 
 # 데이터 로드
-train_dataset = torchaudio.datasets.LIBRISPEECH(root='./data', url='train-clean-100', download=True)
+train_dataset = torchaudio.datasets.LIBRISPEECH(root='/home/work/rvc/wav_attack/data', url='train-clean-100', download=True)
 
 def collate_fn(batch):
     waveforms = []
@@ -37,30 +37,23 @@ def collate_fn(batch):
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
-# HuBERT 모델과 프로세서 초기화
-processor = Wav2Vec2Processor.from_pretrained("facebook/hubert-large-ls960-ft")
-hubert = HubertModel.from_pretrained("facebook/hubert-large-ls960-ft").to(device)
-
-# NoiseEncoder 모델 초기화
-noise_encoder = NoiseEncoder().to(device)
+# 모델 초기화
+wavlm = WavLMModel.from_pretrained("microsoft/wavlm-large").to(device)
+generator = Generator().to(device)
+discriminator = Discriminator().to(device)
 
 # 옵티마이저 설정
-optimizer = torch.optim.Adam(noise_encoder.parameters(), lr=learning_rate)
+optimizer_G = torch.optim.Adam(generator.parameters(), lr=learning_rate)
+optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=learning_rate)
 
 # 학습 실행
-img_losses, emb_losses, total_losses = train_noise_encoder(noise_encoder,
-                                                            hubert,
-                                                            train_loader, 
-                                                            optimizer, 
-                                                            num_epochs, 
-                                                            device, 
-                                                            lambda_img=lambda_img, 
-                                                            lambda_emb=lambda_emb)
+train_noise_encoder(generator, discriminator, wavlm, train_loader, optimizer_G, optimizer_D, num_epochs, batch_size, device, lambda_wav, lambda_centroid, lambda_gan)
 
 # 학습 완료 메시지 출력
 print("학습 완료!")
 
-model_save_path = os.path.join(save_dir, 'noise_encoder.pth')
-torch.save(noise_encoder.state_dict(), model_save_path)
+# 모델 저장
+torch.save(generator.state_dict(), os.path.join(save_dir, 'generator.pth'))
+torch.save(discriminator.state_dict(), os.path.join(save_dir, 'discriminator.pth'))
 
-print(f"모델이 {model_save_path} 경로에 저장되었습니다.")
+print(f"모델이 {save_dir}에 저장되었습니다.")
