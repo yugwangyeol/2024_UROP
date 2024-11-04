@@ -1,3 +1,4 @@
+# models.py
 import torch
 import torch.nn as nn
 
@@ -16,7 +17,6 @@ class Generator(nn.Module):
         )
 
     def forward(self, x):
-
         return self.model(x)
 
 class Discriminator(nn.Module):
@@ -24,18 +24,21 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv1d(1, 64, kernel_size=3, padding=1),
-            nn.ReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Conv1d(64, 128, kernel_size=3, padding=1),
-            nn.ReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Conv1d(128, 256, kernel_size=3, padding=1),
-            nn.ReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
         )
         self.flatten = nn.Flatten()
-        self.fc = nn.Linear(256 * 80, 1)  # mel 크기와 일치하게 설정
 
     def forward(self, x):
         x = self.conv(x)
         x = self.flatten(x)
-        x = self.fc(x)
+        # x의 크기 출력
+        
+        # 동적으로 Linear 레이어의 입력 크기를 설정
+        linear_layer = nn.Linear(x.size(1), 1).to(x.device)
+        x = linear_layer(x)
+        
         return torch.sigmoid(x)
-

@@ -1,75 +1,110 @@
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
-from transformers import Wav2Vec2Model
-import wandb  # wandb 추가
+import torchaudio.transforms as T
+import wandb
 
 # wandb 초기화
+wandb.init(project="mel_GAN_noise_attack")
 
-wandb.init(project="noise_DAE_project")
+def train_noise_encoder(generator, discriminator, extractor, dataloader, optimizer_G, optimizer_D, num_epochs, batch_size, device, lambda_wav, lambda_centroid, lambda_gan):
+    # 사전 학습된 centroid 로드
+    centroids = torch.load('wavlm_centroids.pt').to(device)
+    
+    generator.train()
+    discriminator.train()
+    extractor.eval()
 
 
-def cosine_similarity_loss(x, y):
-    cos_sim = F.cosine_similarity(x, y)
-    return cos_sim.mean()
-
-def transform_data(waveform, device):
-    # waveform의 차원 [batch_size, num_channels, sequence_length]으로 변환
-    return waveform.squeeze(1).to(device)  # [batch_size, sequence_length]
-
-def train_noise_encoder(noise_encoder, wav2vec2, dataloader, optimizer, num_epochs, device, lambda_img=0.95, lambda_emb=0.05):
-    noise_encoder.train()  # 학습 모드 전환
+    mel_transform = T.MelSpectrogram(
+        sample_rate=16000,
+        n_fft=1024,
+        hop_length=256,
+        n_mels=80
+    ).to(device)
 
     for epoch in range(num_epochs):
-        epoch_img_loss = 0.0
-        epoch_emb_loss = 0.0
-        epoch_total_loss = 0.0
+        epoch_wav_loss = 0.0
+        epoch_centroid_loss = 0.0
+        epoch_g_loss = 0.0
+        epoch_d_loss = 0.0
 
         for waveforms in tqdm(dataloader, desc=f"Epoch {epoch+1}/{num_epochs}"):
             waveforms = waveforms.to(device)
 
-            waveforms = transform_data(waveforms, device)
+            # -----------------
+            # Generator 학습 - g_loss와 centroid_loss
+            # -----------------
+            optimizer_G.zero_grad()
 
-            # NoiseEncoder 통과
-            noise = noise_encoder(waveforms.unsqueeze(1)).to(device)
-            # [batch_size, time]->[batch_size, 1, time]
-            # noise_encoder의 입력 size에 맞춤.
-            noisy_waveforms = torch.clamp(waveforms.unsqueeze(1) + noise, 0, 1).to(device)  # [batch_size, 1, time]
-            # 원본 waveforms에 noise_encoder에서 생성된 노이즈를 더함.
-            # waveform의 범위가 보통 [-1,1] or [0,1]사이 값이기 때문임.
-            # Wav2Vec 2.0 모델을 사용하여 임베딩 계산
+            noise = generator(waveforms)
+            noisy_waveforms = torch.clamp(waveforms + noise, -1, 1)
+
+            mel_spectrograms = mel_transform(waveforms)
+            noisy_mel_spectrograms = mel_transform(noisy_waveforms)
+
+            validity_fake = discriminator(noisy_mel_spectrograms.reshape(batch_size, 1, -1))
+            valid = torch.ones_like(validity_fake)
+
+            g_loss = F.binary_cross_entropy(validity_fake, valid)
+            wav_loss = F.mse_loss(noisy_waveforms, waveforms)
+
+            # Centroid loss
             with torch.no_grad():
-                wav2vec2_original_output = wav2vec2(waveforms).last_hidden_state.to(device)
-                wav2vec2_noisy_output = wav2vec2(noisy_waveforms.squeeze(1)).last_hidden_state.to(device)
-                # squeeze : 다시 원본 상태로 돌려놓기
 
-            # Loss 계산
-            img_loss = torch.nn.functional.mse_loss(noisy_waveforms, waveforms.unsqueeze(1)).to(device)
+                original_emb = extractor(waveforms.squeeze(1)).last_hidden_state.mean(dim=1)
+                noisy_emb = extractor(noisy_waveforms.squeeze(1)).last_hidden_state.mean(dim=1)
+                
+                distances_to_centroids = torch.cdist(noisy_emb, centroids)
+                farthest_centroid_idx = torch.argmax(distances_to_centroids, dim=1)
+                target_centroids = centroids[farthest_centroid_idx]
+                
+            centroid_loss = F.mse_loss(noisy_emb, target_centroids)
+            total_loss_G = lambda_wav * wav_loss + lambda_centroid * centroid_loss + lambda_gan * g_loss
 
-            # 두 임베딩 간의 L2 distance 계산
-            l2_distance = torch.norm(wav2vec2_noisy_output - wav2vec2_original_output, p=2, dim=-1)
-            # L2 distance를 최대화하려면 음수로 반전하여 loss로 사용
-            emb_loss = -torch.mean(l2_distance).to(device)
-            
+            total_loss_G.backward()
+            optimizer_G.step()
 
-            total_loss = lambda_img * img_loss + lambda_emb * emb_loss
+            # -----------------
+            # Discriminator 학습 - d_loss
+            # -----------------
+            optimizer_D.zero_grad()
 
-            # 역전파 및 최적화
-            optimizer.zero_grad()
-            total_loss.backward()
-            optimizer.step()
+            validity_real = discriminator(mel_spectrograms.detach().reshape(batch_size, 1, -1))
+            validity_fake = discriminator(noisy_mel_spectrograms.detach().reshape(batch_size, 1, -1))
 
-            # 손실 값 저장
-            epoch_img_loss += img_loss.item()
-            epoch_emb_loss += emb_loss.item()
-            epoch_total_loss += total_loss.item()
+            valid = torch.ones_like(validity_real)
+            fake = torch.zeros_like(validity_fake)
 
-        # wandb 로그 기록
+            d_real_loss = F.binary_cross_entropy(validity_real, valid)
+            d_fake_loss = F.binary_cross_entropy(validity_fake, fake)
+            d_loss = (d_real_loss + d_fake_loss) / 2
+
+            d_loss.backward()
+            optimizer_D.step()
+
+            # 손실 기록
+            epoch_wav_loss += wav_loss.item()
+            epoch_centroid_loss += centroid_loss.item()
+            epoch_g_loss += g_loss.item()
+            epoch_d_loss += d_loss.item()
+
+        # wandb에 평균 손실 값 기록
+
         wandb.log({
             "epoch": epoch + 1,
-            "Spectrogram Loss": epoch_img_loss / len(dataloader),
-            "Embedding Loss": epoch_emb_loss / len(dataloader),
-            "Total Loss": epoch_total_loss / len(dataloader),
+            "wav_loss": epoch_wav_loss / len(dataloader),
+            "centroid_loss": epoch_centroid_loss / len(dataloader),
+            "g_loss": epoch_g_loss / len(dataloader),
+            "d_loss": epoch_d_loss / len(dataloader),
+            "total_loss_G": (epoch_wav_loss + epoch_centroid_loss + epoch_g_loss) / len(dataloader),
+            "total_loss_D": epoch_d_loss / len(dataloader)
         })
 
-    return epoch_img_loss / len(dataloader), epoch_emb_loss / len(dataloader), epoch_total_loss / len(dataloader)
+        print(f"Epoch {epoch+1}/{num_epochs}, "
+              f"Wav Loss: {epoch_wav_loss / len(dataloader):.4f}, "
+              f"Centroid Loss: {epoch_centroid_loss / len(dataloader):.4f}, "
+              f"G Loss: {epoch_g_loss / len(dataloader):.4f}, "
+              f"D Loss: {epoch_d_loss / len(dataloader):.4f}")
+
+    return wav_loss.item(), centroid_loss.item(), g_loss.item(), d_loss.item()

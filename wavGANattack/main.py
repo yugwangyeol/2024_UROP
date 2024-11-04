@@ -1,10 +1,9 @@
+# main.py
 import torch
 import torchaudio
 from torch.utils.data import DataLoader
-
 from transformers import WavLMModel
 from models import Discriminator, Generator
-
 from train import train_noise_encoder
 import os
 
@@ -17,13 +16,11 @@ if not os.path.exists(save_dir):
     os.makedirs(save_dir)
 
 # 하이퍼파라미터
-
 batch_size = 4
 num_epochs = 10
 learning_rate = 0.001
-lambda_centroid = 0.2
+lambda_emb = 0.2
 lambda_wav = 0.8
-lambda_gan = 0.5
 
 # 데이터 로드
 train_dataset = torchaudio.datasets.LIBRISPEECH(root='/home/work/rvc/wav_attack/data', url='train-clean-100', download=True)
@@ -38,23 +35,19 @@ def collate_fn(batch):
         waveforms.append(waveform)
     return torch.stack(waveforms)
 
-
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-
 
 # 모델 초기화
 wavlm = WavLMModel.from_pretrained("microsoft/wavlm-large").to(device)
 generator = Generator().to(device)
 discriminator = Discriminator().to(device)
 
-
-# 옵티마이저 설정
+# 모델 초기화
 optimizer_G = torch.optim.Adam(generator.parameters(), lr=learning_rate)
 optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=learning_rate)
 
-
-train_noise_encoder(generator, discriminator, wavlm, train_loader, optimizer_G, optimizer_D, num_epochs, batch_size, device, lambda_wav, lambda_centroid, lambda_gan)
-
+# 학습 실행
+img_losses, emb_losses, gan_losses = train_noise_encoder(generator, discriminator, wavlm, train_loader, optimizer_G, optimizer_D, num_epochs, batch_size, device, lambda_wav, lambda_emb)
 
 # 학습 완료 메시지 출력
 print("학습 완료!")
