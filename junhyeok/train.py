@@ -15,6 +15,7 @@ def train_noise_encoder(generator, discriminator, extractor, dataloader, optimiz
     discriminator.train()
     extractor.eval()
 
+
     mel_transform = T.MelSpectrogram(
         sample_rate=16000,
         n_fft=1024,
@@ -50,6 +51,7 @@ def train_noise_encoder(generator, discriminator, extractor, dataloader, optimiz
 
             # Centroid loss
             with torch.no_grad():
+
                 original_emb = extractor(waveforms.squeeze(1)).last_hidden_state.mean(dim=1)
                 noisy_emb = extractor(noisy_waveforms.squeeze(1)).last_hidden_state.mean(dim=1)
                 
@@ -88,6 +90,7 @@ def train_noise_encoder(generator, discriminator, extractor, dataloader, optimiz
             epoch_d_loss += d_loss.item()
 
         # wandb에 평균 손실 값 기록
+
         wandb.log({
             "epoch": epoch + 1,
             "wav_loss": epoch_wav_loss / len(dataloader),

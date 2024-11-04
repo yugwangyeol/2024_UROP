@@ -16,6 +16,7 @@ class Generator(nn.Module):
         )
 
     def forward(self, x):
+
         return self.model(x)
 
 class Discriminator(nn.Module):
@@ -37,3 +38,4 @@ class Discriminator(nn.Module):
         x = self.flatten(x)
         x = self.fc(x)
         return torch.sigmoid(x)
+
