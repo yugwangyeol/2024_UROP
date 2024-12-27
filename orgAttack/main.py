@@ -2,7 +2,7 @@ import torch
 import torchaudio
 from torch.utils.data import DataLoader
 from transformers import WavLMModel
-from models import Discriminator, Generator
+from model import Discriminator, Generator
 from train import train_noise_encoder
 import os
 # 장치 설정
