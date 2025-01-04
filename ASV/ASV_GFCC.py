@@ -44,7 +44,7 @@ def evaluate_asv(original_dir, generated_dir):
     original_files = sorted([os.path.join(original_dir, f) for f in os.listdir(original_dir) if f.endswith(".wav")])
     generated_files = sorted([os.path.join(generated_dir, f) for f in os.listdir(generated_dir) if f.endswith(".wav")])
 
-    assert len(original_files) == len(generated_files), "원본과 생성 데이터의 파일 수가 같아야 합니다."
+    assert len(original_files) == len(generated_files), 
 
     similarities = []
     for orig_file, gen_file in zip(original_files, generated_files):
