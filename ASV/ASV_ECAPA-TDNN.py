@@ -35,8 +35,8 @@ def evaluate_asv(original_dir, generated_dir):
         similarity = cosine_similarity(orig_embedding, gen_embedding)
         similarities.append(similarity)
 
-    avg_similarity = np.mean(similarities)
-    print(f"평균 코사인 유사도: {avg_similarity:.4f}")
+    avg_similarity = np.mean(similarities)*100
+    print(f"평균 코사인 유사도: {avg_similarity:.4f}%")
 
     return similarities
 
