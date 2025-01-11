@@ -1,0 +1,10 @@
+numpy
+glob2
+tqdm
+librosa
+numba
+scipy
+tensorboard
+webrtcvad
+pesq
+pystoi
