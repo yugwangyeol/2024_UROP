@@ -108,6 +108,9 @@ class UnifiedEvaluator:
         return 10 * np.log10((signal_power_value / noise_power_value) ** 2)
 
     def preprocess_audio(self, waveform: torch.Tensor, sample_rate: int) -> torch.Tensor:
+        """
+        오디오 데이터를 전처리하여 16kHz로 샘플링
+        """
         waveform = waveform.to('cpu')
         
         if sample_rate != 16000:
@@ -120,6 +123,9 @@ class UnifiedEvaluator:
         return waveform.to(self.device)
 
     def extract_embeddings(self, waveform: torch.Tensor) -> torch.Tensor:
+        """
+        오디오 데이터에서 임베딩 추출
+        """
         try:
             with torch.no_grad():
                 feats = self.speaker_encoder.mods.compute_features(waveform)
@@ -130,9 +136,15 @@ class UnifiedEvaluator:
             raise
 
     def compute_similarity(self, emb1: torch.Tensor, emb2: torch.Tensor) -> float:
-        return torch.nn.functional.cosine_similarity(emb1, emb2).item()
+        """
+        두 임베딩 간의 코사인 유사도를 계산
+        """
+        return torch.nn.functional.cosine_similarity(emb1, emb2, dim=-1).mean().item()
 
     def find_threshold_from_vctk(self, vctk_path: str, utterances_per_speaker: int = 256) -> Tuple[float, float]:
+        """
+        VCTK 데이터셋을 사용해 임계값과 EER 계산
+        """
         dataset = torchaudio.datasets.VCTK_092(root=vctk_path, download=False)
         
         speaker_utterances: Dict[str, List[torch.Tensor]] = {}
@@ -165,6 +177,9 @@ class UnifiedEvaluator:
         return threshold, eer
 
     def compute_eer(self, genuine_scores: np.ndarray, impostor_scores: np.ndarray) -> Tuple[float, float]:
+        """
+        EER 및 최적 임계값 계산
+        """
         thresholds = np.linspace(0, 1, 1000)
         fars = []
         frrs = []
@@ -185,6 +200,9 @@ class UnifiedEvaluator:
         return eer, optimal_threshold
 
     def verify_speaker(self, wav1: torch.Tensor, wav2: torch.Tensor, threshold: float) -> bool:
+        """
+        두 오디오 간 화자 유사성 검증
+        """
         emb1 = self.extract_embeddings(wav1)
         emb2 = self.extract_embeddings(wav2)
         similarity = self.compute_similarity(emb1, emb2)
@@ -205,18 +223,18 @@ class UnifiedEvaluator:
         with open(test_noisy_pairs_path, 'r') as f:
             noisy_pairs = [line.strip().split() for line in f.readlines()]
         
-        freevo_files = sorted(
+        vc_files = sorted(
             [os.path.join(vc_output_path, f) for f in os.listdir(vc_output_path) if f.endswith('.wav')]
         )
 
-        if not (len(original_pairs) == len(noisy_pairs) == len(freevo_files)):
+        if not (len(original_pairs) == len(noisy_pairs) == len(vc_files)):
             raise ValueError("Number of files in all sources must match")
 
         for i in tqdm(range(len(original_pairs)), desc="Evaluating", ncols=70):
             try:
                 x_path = original_pairs[i][0]
                 x_prime_path = noisy_pairs[i][0]
-                f_x_prime_t_path = freevo_files[i]
+                f_x_prime_t_path = vc_files[i]
 
                 ref, ref_rate = librosa.load(x_path, sr=16000)
                 deg, deg_rate = librosa.load(x_prime_path, sr=16000)

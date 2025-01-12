@@ -46,17 +46,16 @@ def main():
     new_pairs = []
     
     # 각 소스 파일에 대해 처리
-    for i, (src_path, tar_path) in enumerate(pairs):
-        src_filename = os.path.splitext(os.path.basename(src_path))[0]
-        wav_name = f"noisy_{src_filename}.wav"
+    for i, (style_path, source_path) in enumerate(pairs):
+        style_filename = os.path.splitext(os.path.basename(style_path))[0]
+        wav_name = f"noisy_{style_filename}.wav"
         output_wav_path = os.path.join(output_wav_dir, wav_name)  
         
         # 노이즈 적용 및 저장
         try:
-            processed_path = process_audio_file(noise_encoder, src_path, output_wav_path, device)
+            processed_path = process_audio_file(noise_encoder, style_path, output_wav_path, device)
             # 새로운 쌍 추가
-            new_pairs.append(f"{os.path.abspath(processed_path)} {os.path.abspath(tar_path)}\n")
-            print(f"처리 완료: {src_path} -> {processed_path}")
+            new_pairs.append(f"{os.path.abspath(processed_path)} {os.path.abspath(source_path)}\n")
         except Exception as e:
             print(f"파일 처리 중 오류 발생 ({src_path}): {str(e)}")
     

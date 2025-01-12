@@ -8,3 +8,4 @@ tensorboard
 webrtcvad
 pesq
 pystoi
+speechbrain
