@@ -1,5 +1,7 @@
-import sys
 import os
+import sys
+sys.path.append(os.path.abspath("."))
+sys.path.append(os.path.abspath("FreeVC"))
 import torch
 import numpy as np
 import librosa
@@ -9,7 +11,6 @@ from models import SynthesizerTrn
 from FreeVC import utils as vc_utils
 import soundfile as sf
 from tqdm import tqdm
-sys.path.append(os.path.abspath("FreeVC"))
 
 def vc_infer(source_audio_path, style_audio_path, smodel, cmodel, net_g, hps, utils):
     # 스타일 음성을 로드하여 화자 임베딩(g_tgt)을 생성
@@ -49,14 +50,18 @@ def main():
     cmodel = vc_utils.get_cmodel(0)
 
     # 출력 디렉토리 생성
-    output_dir = "data/FreeVC_output"
+    output_dir = "data/FreeVC_noise"
     os.makedirs(output_dir, exist_ok=True)
 
     # 변환할 페어 파일 로드
-    with open("data/FreeVC_test_noisy_pairs.txt", "r") as f:
+    pairs_file = "data/FreeVC_test_noisy_pairs.txt"
+    with open(pairs_file, "r") as f:
         pairs = f.readlines()
     
     print(f"Found {len(pairs)} pairs to process")
+    
+    # 업데이트된 경로를 저장할 리스트
+    updated_pairs = []
     
     # 각 페어를 처리
     for pair in tqdm(pairs, desc="Processing voice conversion"):
@@ -66,20 +71,18 @@ def main():
         output_name = get_output_name(style_path, source_path)
         output_path = os.path.join(output_dir, output_name)
         
-        # 출력 파일이 이미 존재하면 건너뜀
-        if os.path.exists(output_path):
-            print(f"Skipping {output_name} - already exists")
-            continue
-        
         # voice conversion 수행
-        try:
-            converted_audio = vc_infer(source_path, style_path, smodel, cmodel, net_g, hps, vc_utils)
-            # 변환된 음성 저장
-            sf.write(output_path, converted_audio, hps.data.sampling_rate)
-            
-        except Exception as e:
-            print(f"\nError processing {style_path} -> {source_path}: {str(e)}")
-            continue
+        converted_audio = vc_infer(source_path, style_path, smodel, cmodel, net_g, hps, vc_utils)
+        # 변환된 음성 저장
+        sf.write(output_path, converted_audio, hps.data.sampling_rate)
+        # 경로 정보 저장
+        updated_pairs.append(f"{style_path} {source_path} {output_path}\n")
+    
+    # 업데이트된 경로 정보를 파일에 저장
+    with open(pairs_file, "w") as f:
+        f.writelines(updated_pairs)
+    
+    print(f"Updated pairs file saved to {pairs_file}")
 
 if __name__ == "__main__":
     main()

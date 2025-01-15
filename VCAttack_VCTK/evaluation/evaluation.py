@@ -9,6 +9,7 @@ from pystoi import stoi
 from speechbrain.pretrained import EncoderClassifier
 from tqdm import tqdm
 from typing import Dict, Tuple, List
+import argparse
 
 class UnifiedEvaluator:
     def __init__(self, device: str = 'cuda', threshold_path: str = 'asv_threshold.json'):
@@ -81,9 +82,6 @@ class UnifiedEvaluator:
         print(f"Calculated and saved new threshold: {threshold:.3f} (EER: {eer:.3f})")
         return threshold, eer
 
-    def signal_power(self, signal):
-        return np.mean(signal ** 2) ** 0.5
-
     def evaluate_pesq(self, ref, deg, rate):
         return pesq(rate, ref, deg, mode='wb')
 
@@ -95,17 +93,17 @@ class UnifiedEvaluator:
         ref = ref[:min_len]
         deg = deg[:min_len]
 
-        ref = ref / np.max(np.abs(ref))
-        deg = deg / np.max(np.abs(deg))
-
-        noise = ref - deg
-        signal_power_value = self.signal_power(ref)
-        noise_power_value = self.signal_power(noise)
-
-        if noise_power_value == 0:
+        noise = deg - ref
+        signal_power = np.mean(ref ** 2)
+        noise_power = np.mean(noise ** 2)
+        
+        if noise_power == 0:
             return float('inf')
-
-        return 10 * np.log10((signal_power_value / noise_power_value) ** 2)
+        if signal_power == 0:
+            return float('-inf')
+            
+        snr = 10 * np.log10(signal_power / noise_power)
+        return snr
 
     def preprocess_audio(self, waveform: torch.Tensor, sample_rate: int) -> torch.Tensor:
         """
@@ -209,10 +207,9 @@ class UnifiedEvaluator:
         return similarity >= threshold
 
     def evaluate_all_metrics(self, 
-                           test_pairs_path: str,
-                           test_noisy_pairs_path: str,
-                           vc_output_path: str,
-                           threshold: float) -> Dict:
+                        test_pairs_path: str,
+                        test_noisy_pairs_path: str,
+                        threshold: float) -> Dict:
         results = {
             'snrs': [], 'pesqs': [], 'stois': [],
             'asr_count': 0, 'psr_count': 0, 'total': 0
@@ -223,18 +220,17 @@ class UnifiedEvaluator:
         with open(test_noisy_pairs_path, 'r') as f:
             noisy_pairs = [line.strip().split() for line in f.readlines()]
         
-        vc_files = sorted(
-            [os.path.join(vc_output_path, f) for f in os.listdir(vc_output_path) if f.endswith('.wav')]
-        )
+        if not all(len(pair) == 3 for pair in noisy_pairs):
+            raise ValueError("Each line in noisy_pairs file must contain three paths")
 
-        if not (len(original_pairs) == len(noisy_pairs) == len(vc_files)):
-            raise ValueError("Number of files in all sources must match")
+        if len(original_pairs) != len(noisy_pairs):
+            raise ValueError("Number of pairs in both files must match")
 
         for i in tqdm(range(len(original_pairs)), desc="Evaluating", ncols=70):
             try:
                 x_path = original_pairs[i][0]
                 x_prime_path = noisy_pairs[i][0]
-                f_x_prime_t_path = vc_files[i]
+                f_x_prime_t_path = noisy_pairs[i][2]
 
                 ref, ref_rate = librosa.load(x_path, sr=16000)
                 deg, deg_rate = librosa.load(x_prime_path, sr=16000)
@@ -263,10 +259,11 @@ class UnifiedEvaluator:
 
                 results['total'] += 1
 
-                print(f"\nPair {i+1}:")
-                print(f"Reference: {os.path.basename(x_path)}")
-                print(f"Degraded: {os.path.basename(x_prime_path)}")
-                print(f"Metrics - SNR: {snr_score:.2f} dB, PESQ: {pesq_score:.2f}, STOI: {stoi_score:.2f}")
+                # print(f"\nPair {i+1}:")
+                # print(f"Reference: {os.path.basename(x_path)}")
+                # print(f"Degraded: {os.path.basename(x_prime_path)}")
+                # print(f"Converted: {os.path.basename(f_x_prime_t_path)}")
+                # print(f"Metrics - SNR: {snr_score:.2f} dB, PESQ: {pesq_score:.2f}, STOI: {stoi_score:.2f}")
 
             except Exception as e:
                 print(f"\nError processing pair {i+1}: {str(e)}")
@@ -284,29 +281,38 @@ class UnifiedEvaluator:
         return final_results
 
 def main():
+    parser = argparse.ArgumentParser(description='VCAttack evaluation')
+    parser.add_argument('--model', type=str, choices=['FreeVC', 'PH'], default='FreeVC',
+                      help='Type of voice conversion model (FreeVC or PH)')
+    args = parser.parse_args()
+
     # 파일 경로
-    test_pairs_path = "data/FreeVC_test_pairs.txt"
-    test_noisy_pairs_path = "data/FreeVC_test_noisy_pairs.txt"
-    vc_output_path = "data/FreeVC_noise"
+    test_pairs_path = f"data/{args.model}_test_pairs.txt"
+    test_noisy_pairs_path = f"data/{args.model}_test_noisy_pairs.txt"
     vctk_path = "data/VCTK-Corpus-0.92"  
     
     # 통합 평가기 초기화
     evaluator = UnifiedEvaluator(device='cuda')
+
+    # 임계값 고정
+    threshold = 0.328  # RW-Voiceshield의 임계값
+    eer = None  
     
-    # 임계값 로드 또는 계산
-    threshold, eer = evaluator.get_or_calculate_threshold(vctk_path)
+    # # 임계값 로드 또는 계산
+    # threshold, eer = evaluator.get_or_calculate_threshold(vctk_path)
 
     # 모든 메트릭 평가
     print("\nEvaluating all metrics...")
+    print(f"Model: {args.model}")
     results = evaluator.evaluate_all_metrics(
         test_pairs_path=test_pairs_path,
         test_noisy_pairs_path=test_noisy_pairs_path,
-        vc_output_path=vc_output_path,
         threshold=threshold
     )
     
     # 결과 출력
     print("\nFinal Evaluation Results:")
+    print(f"Model: {args.model}")
     print(f"Total pairs evaluated: {results['total_evaluated']}")
     print(f"Average SNR: {results['SNR']:.2f} dB")
     print(f"Average PESQ: {results['PESQ']:.2f}")

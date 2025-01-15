@@ -18,6 +18,9 @@ from FreeVC import utils as vc_utils
 
 from evaluation import UnifiedEvaluator
 
+os.environ["NUMBA_DISABLE_ERROR_MESSAGE"] = "1"  # 에러 로그 비활성화
+os.environ["NUMBA_LOG_LEVEL"] = "WARNING"       # 로그 레벨을 WARNING으로 설정
+
 def load_vc_models():
     """
     FreeVC 모델을 로드하고, 인퍼런스에 필요한 component를 반환
@@ -46,13 +49,12 @@ def create_pairs_from_test_file(test_file, output_path, audio_output_dir, vctk_p
     Args:
         test_file: test.txt 경로
         output_path: (x,t) txt 파일 저장 경로 ({VC_model}_test_pairs.txt)
-        audio_output_dir: F(x,t) wav 파일 저장 경로 ({data/Fre}_original)
-        vctk_path: ASV 임계값 계산 시 필요한 VCTK 데이터셋 경로
+        audio_output_dir: F(x,t) wav 파일 저장 경로 ({VC_model}_original)
         model_loader: VC 모델 로드 함수
         model_infer: VC 모델 인퍼런스 함수
     """
     os.makedirs(audio_output_dir, exist_ok=True)
-    
+
     # ASV evaluator 초기화
     print("Initializing ASV evaluator...")
     evaluator = UnifiedEvaluator(device='cuda')
@@ -60,7 +62,7 @@ def create_pairs_from_test_file(test_file, output_path, audio_output_dir, vctk_p
     # 고정된 threshold 사용
     threshold = 0.328  # RW-Voiceshield의 임계값
     eer = None  
-    print(f"Using fixed threshold: {threshold:.3f}")
+    print(f"Using threshold: {threshold:.3f}")
     
     # # threshold 계산 or 로드
     # print("Getting ASV threshold...")
@@ -68,8 +70,8 @@ def create_pairs_from_test_file(test_file, output_path, audio_output_dir, vctk_p
     # print(f"Using threshold: {threshold:.3f} (EER: {eer:.3f})")
     
     # VC 모델 로드 
-    print("Loading models...")
-    smodel, net_g, cmodel, hps = model_loader()
+    print("Loading VC models...")
+    smodel, net_g, cmodel, hps = model_loader() 
     
     # test.txt의 오디오 파일 불러오기
     with open(test_file, "r") as f:
@@ -77,88 +79,75 @@ def create_pairs_from_test_file(test_file, output_path, audio_output_dir, vctk_p
     
     print(f"Total files in test.txt: {len(all_files)}")
     
-    # 검증된 pair 저장 리스트
+    # 매칭된 페어를 저장할 리스트
     verified_pairs = []
-    
-    for source_path in tqdm(all_files, desc="Processing source"):
-        source_spk = source_path.split("/")[-2] # 소스 화자 ID 추출
-        style_candidates = []
+
+    # 화자 리스트 생성
+    unique_speakers = list(set(file.split("/")[-2] for file in all_files))
+
+    # 각 화자에 대해 
+    for spk in tqdm(unique_speakers):
+        print(f"processing speakers : {spk}")
+        # 해당 화자의 모든 wav 파일 수집
+        wavs = [file for file in all_files if file.split("/")[-2] == spk]
+        random.shuffle(wavs)
+        i = 0  # 현재 화자의 매칭된 페어 수
         
-        # num_pairs만큼 스타일 후보 선택
-        while len(style_candidates) < args.num_pairs:
-            style_path = random.choice(all_files) # 랜덤으로 스타일 파일 선택
-            style_spk = style_path.split("/")[-2]
-            
-            # 소스 화자와 스타일 화자가 다르고, 이미 선택되지 않은 경우
-            if style_spk != source_spk and style_path not in style_candidates: # 스타일 화자 ID 추출
-                try:
-                    # 출력 파일 이름 생성
+        for style_path in wavs:  # 현재 화자(spk)의 wav 파일을 순회 (스타일 파일 순회)
+            for j in range(10):  # 스타일 파일당 최대 10개의 소스 파일 매칭 시도
+                while True:
+                    source_path = random.choice(all_files)  # 소스 파일 랜덤 선택
+                    if source_path.split("/")[-2] != spk:  # 소스 화자와 스타일 화자가 다를 때만 선택
+                        break
+                
+                converted_audio = model_infer(source_path, style_path, smodel, cmodel, net_g, hps, vc_utils)
+                    
+                # 변환된 음성을 임시 파일로 저장
+                temp_output = "temp_output.wav"
+                sf.write(temp_output, converted_audio, hps.data.sampling_rate)
+                    
+                # 검증용 wav 파일 로드
+                style_wav, sr = torchaudio.load(style_path)
+                conv_wav, sr = torchaudio.load(temp_output)
+                        
+                # 오디오 전처리
+                style_wav = evaluator.preprocess_audio(style_wav, sr)
+                conv_wav = evaluator.preprocess_audio(conv_wav, sr)
+                        
+                # 화자 유사성 검증
+                if evaluator.verify_speaker(conv_wav, style_wav, threshold):
+                     # 검증 성공 시 오디오 저장 및 pair 추가
                     output_name = get_output_name(style_path, source_path)
                     output_path_full = os.path.join(audio_output_dir, output_name)
-                    
-                    # 출력 파일이 이미 존재하면 건너뜀
-                    if os.path.exists(output_path_full):
-                        print(f"Skipping {output_name} - already exists")
-                        continue
-                    
-                    # voice conversion 수행
-                    converted_audio = model_infer(source_path, style_path, smodel, cmodel, net_g, hps, vc_utils)
-                    
-                    # 임시 파일에 변환된 음성 저장
-                    temp_output = "temp_output.wav"
-                    sf.write(temp_output, converted_audio, hps.data.sampling_rate)
-                    
-                    # ASV로 검증
-                    try:
-                        # 검증용 wav 파일 로드
-                        style_wav, sr = torchaudio.load(style_path)
-                        conv_wav, sr = torchaudio.load(temp_output)
-                        
-                        # 오디오 전처리
-                        style_wav = evaluator.preprocess_audio(style_wav, sr)
-                        conv_wav = evaluator.preprocess_audio(conv_wav, sr)
-                        
-                        # 화자 유사성 검증
-                        if evaluator.verify_speaker(conv_wav, style_wav, threshold):
-                            # 검증 성공 시 오디오 저장 및 pair 추가
-                            os.rename(temp_output, output_path_full)
-                            verified_pairs.append(f"{style_path} {source_path}\n")
-                            style_candidates.append(style_path)
-                        else:
-                            os.remove(temp_output)
+                    os.rename(temp_output, output_path_full)
+                    verified_pairs.append(f"{style_path} {source_path}\n")
+                    i += 1  # 매칭된 페어 수 증가
+                    break
+                else:
+                    # 검증 실패 시 임시 파일 삭제
+                    os.remove(temp_output)
                             
-                    except Exception as e:
-                        # print(f"\nError in verification: {str(e)}")
-                        if os.path.exists(temp_output):
-                            os.remove(temp_output)
-                        continue
-                        
-                except Exception as e:
-                    print(f"\nError in conversion: {str(e)}")
-                    continue
-    
-    # 검증된 pair를 출력 파일에 저장
+            if i >= 50:  # 현재 화자에 대해 50개의 매칭된 페어를 찾으면, 해당 화자에 대한 처리를 중단
+                break              
+
+    # 검증된 페어를 출력 파일에 저장
     with open(output_path, "w") as f:
         f.writelines(verified_pairs)
     
     print(f"Created {len(verified_pairs)} verified pairs and saved to {output_path}")
     print(f"Converted audio files saved to {audio_output_dir}")
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Voice conversion pair creation with model selection')
-    parser.add_argument('--model', type=str, choices=['FreeVC', 'PH'], required=True,
-                    help='Type of voice conversion model (FreeVC or PH)')
-    parser.add_argument('--test_file', type=str, default="data/test.txt",
-                    help='Path to test file')
-    parser.add_argument('--vctk_path', type=str, default="data",
-                    help='Path to VCTK dataset')
-    parser.add_argument('--num_pairs', type=int, default=5,
-                    help='Number of pairs per source')
-    
+    parser = argparse.ArgumentParser(description='Voice conversion pair creation')
+    parser.add_argument('--model', type=str, choices=['FreeVC', 'PH'], default='FreeVC',
+                      help='Type of voice conversion model (FreeVC or PH)')
     args = parser.parse_args()
-    
+
+    test_file = "data/test.txt"  
     output_path = f"data/{args.model}_test_pairs.txt"
     audio_output_dir = f"data/{args.model}_original"
+    vctk_path = "data"          
     
     if args.model == "FreeVC":
         model_loader = load_vc_models
@@ -168,10 +157,10 @@ if __name__ == "__main__":
         model_infer = ph_infer
     
     create_pairs_from_test_file(
-        test_file=args.test_file,
+        test_file=test_file,
         output_path=output_path,
         audio_output_dir=audio_output_dir,
-        vctk_path=args.vctk_path,
+        vctk_path=vctk_path,
         model_loader=model_loader,
         model_infer=model_infer
     )
