@@ -39,6 +39,7 @@ class VCTKDataset(Dataset):
         return waveform
 
 # 데이터 경로
+torchaudio.datasets.VCTK_092(root="data", download=True)
 train_txt_path = "data/train.txt"  # train.txt 파일 경로
 
 # Dataset 및 DataLoader 생성

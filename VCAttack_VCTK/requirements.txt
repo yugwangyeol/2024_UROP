@@ -9,3 +9,5 @@ webrtcvad
 pesq
 pystoi
 speechbrain
+transformers
+wandb
