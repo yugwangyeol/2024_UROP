@@ -2,23 +2,20 @@ import os
 import torch
 import torchaudio
 import numpy as np
+from scipy import stats
 import librosa
 from pesq import pesq
 from pystoi import stoi
 from speechbrain.pretrained import SpeakerRecognition
 from tqdm import tqdm
-from typing import Dict
+from typing import Dict, Tuple
 import argparse
 
 class UnifiedEvaluator:
     def __init__(self, device: str = 'cuda'):
-        """
-        통합 평가를 위한 클래스 초기화
-        """
         self.device = torch.device(device if torch.cuda.is_available() else 'cpu')
         print(f"Using device: {self.device}")
         
-        # SpeechBrain의 ECAPA-TDNN 모델 로드
         self.speaker_encoder = SpeakerRecognition.from_hparams(
             source="speechbrain/spkrec-ecapa-voxceleb",
             savedir="evaluation/pretrained_models/asv"
@@ -70,6 +67,33 @@ class UnifiedEvaluator:
         similarity = self.cosine_similarity(emb1, emb2)
         return similarity >= threshold
 
+    def calculate_statistics(self, data: list) -> Tuple[float, Tuple[float, float]]:
+        if not data:
+            return 0, (0, 0)
+            
+        mean = np.mean(data)
+        ci = stats.t.interval(confidence=0.95, 
+                            df=len(data)-1,
+                            loc=mean,
+                            scale=stats.sem(data))
+                            
+        return mean, ci
+
+    def wilson_score_interval(self, success: int, total: int, alpha: float = 0.05) -> Tuple[float, Tuple[float, float]]:
+        if total == 0:
+            return 0, (0, 0)
+            
+        proportion = success / total
+        z = stats.norm.ppf(1 - alpha/2)
+        
+        denominator = 1 + z**2/total
+        center = (proportion + z**2/(2*total))/denominator
+        
+        err = z * np.sqrt((proportion*(1-proportion) + z**2/(4*total))/total)/denominator
+        
+        ci = (max(0.0, center - err), min(1.0, center + err))
+        return proportion, ci
+
     def evaluate_all_metrics(self, 
                         test_pairs_path: str,
                         test_noisy_pairs_path: str,
@@ -99,7 +123,6 @@ class UnifiedEvaluator:
                 ref, ref_rate = librosa.load(x_path, sr=16000)
                 deg, deg_rate = librosa.load(x_prime_path, sr=16000)
 
-                # 음질 평가
                 snr_score = self.evaluate_snr(ref, deg)
                 pesq_score = self.evaluate_pesq(ref, deg, ref_rate)
                 stoi_score = self.evaluate_stoi(ref, deg, ref_rate)
@@ -108,7 +131,6 @@ class UnifiedEvaluator:
                 results['pesqs'].append(pesq_score)
                 results['stois'].append(stoi_score)
 
-                # ASV 기반 평가
                 if not self.verify_speaker(f_x_prime_t_path, x_path, threshold):
                     results['asr_count'] += 1
 
@@ -121,12 +143,36 @@ class UnifiedEvaluator:
                 print(f"\nError processing pair {i+1}: {str(e)}")
                 continue
 
+        # SNR, PESQ, STOI에 대한 평균, 신뢰구간 계산
+        snr_mean, snr_ci = self.calculate_statistics(results['snrs'])
+        pesq_mean, pesq_ci = self.calculate_statistics(results['pesqs'])
+        stoi_mean, stoi_ci = self.calculate_statistics(results['stois'])
+        
+        # ASR, PSR에 대한 Wilson score interval 계산
+        asr_mean, asr_ci = self.wilson_score_interval(results['asr_count'], results['total'])
+        psr_mean, psr_ci = self.wilson_score_interval(results['psr_count'], results['total'])
+
         final_results = {
-            'SNR': np.mean(results['snrs']) if results['snrs'] else 0,
-            'PESQ': np.mean(results['pesqs']) if results['pesqs'] else 0,
-            'STOI': np.mean(results['stois']) if results['stois'] else 0,
-            'ASR': results['asr_count'] / results['total'] if results['total'] > 0 else 0,
-            'PSR': results['psr_count'] / results['total'] if results['total'] > 0 else 0,
+            'SNR': {
+                'mean': snr_mean,
+                'ci': snr_ci,
+            },
+            'PESQ': {
+                'mean': pesq_mean,
+                'ci': pesq_ci,
+            },
+            'STOI': {
+                'mean': stoi_mean,
+                'ci': stoi_ci,
+            },
+            'ASR': {
+                'mean': asr_mean,
+                'ci': asr_ci,
+            },
+            'PSR': {
+                'mean': psr_mean,
+                'ci': psr_ci,
+            },
             'total_evaluated': results['total']
         }
 
@@ -138,18 +184,12 @@ def main():
                       help='Type of voice conversion model (FreeVC or PH)')
     args = parser.parse_args()
 
-    # 파일 경로
     test_pairs_path = f"data/{args.model}_test_pairs.txt"
     test_noisy_pairs_path = f"data/{args.model}_test_noisy_pairs.txt"
     
-    # 통합 평가기 초기화
     evaluator = UnifiedEvaluator(device='cuda')
-
-    # 임계값 고정
     threshold = 0.328  # RW-Voiceshield의 임계값
-    # threshold = 0.359  # 계산한 임계값
-
-    # 모든 메트릭 평가
+    
     print("\nEvaluating all metrics...")
     print(f"Model: {args.model}")
     results = evaluator.evaluate_all_metrics(
@@ -159,14 +199,14 @@ def main():
     )
     
     # 결과 출력
-    print("\nFinal Evaluation Results:")
+    print("\nEvaluation Results:")
     print(f"Model: {args.model}")
     print(f"Total pairs evaluated: {results['total_evaluated']}")
-    print(f"Average SNR: {results['SNR']:.2f} dB")
-    print(f"Average PESQ: {results['PESQ']:.2f}")
-    print(f"Average STOI: {results['STOI']:.2f}")
-    print(f"ASR: {results['ASR']:.3f}")
-    print(f"PSR: {results['PSR']:.3f}")
+    
+    metrics = ['SNR', 'PESQ', 'STOI', 'ASR', 'PSR']
+    for metric in metrics:
+        print(f"\n{metric}:")
+        print(f"  {results[metric]['mean']:.3f} [{results[metric]['ci'][0]:.3f}, {results[metric]['ci'][1]:.3f}]")
 
 if __name__ == "__main__":
     main()
