@@ -7,20 +7,44 @@ import numpy as np
 import librosa
 from pathlib import Path
 from speaker_encoder.voice_encoder import SpeakerEncoder
-from models import SynthesizerTrn
+from FreeVC.models import SynthesizerTrn
 from FreeVC import utils as vc_utils
 import soundfile as sf
 from tqdm import tqdm
+
+def load_freevc_models():
+    print("Loading FreeVC models...")
+    
+    # Speaker Encoder 모델 로드
+    smodel = SpeakerEncoder('FreeVC/speaker_encoder/ckpt/pretrained_bak_5805000.pt').cuda()
+    
+    # 하이퍼파라미터 로드
+    hps = vc_utils.get_hparams_from_file('FreeVC/logs/freevc.json')
+    
+    # Synthesizer 모델 로드
+    net_g = SynthesizerTrn(
+        hps.data.filter_length // 2 + 1,
+        hps.train.segment_size // hps.data.hop_length,
+        **hps.model).cuda()
+    _ = net_g.eval()
+    _ = vc_utils.load_checkpoint('FreeVC/checkpoints/freevc.pth', net_g, None, True)
+    
+    # Content 추출 모델 로드
+    cmodel = vc_utils.get_cmodel(0)
+    
+    return smodel, net_g, cmodel, hps
 
 def vc_infer(source_audio_path, style_audio_path, smodel, cmodel, net_g, hps, utils):
     # 스타일 음성을 로드하여 화자 임베딩(g_tgt)을 생성
     wav_tgt, _ = librosa.load(style_audio_path, sr=hps.data.sampling_rate)
     g_tgt = smodel.embed_utterance(wav_tgt)
     g_tgt = torch.from_numpy(g_tgt).unsqueeze(0).cuda()
+
     # 소스 음성을 로드하여 음성 내용(c)을 추출
     wav_src, _ = librosa.load(source_audio_path, sr=hps.data.sampling_rate)
     wav_src = torch.from_numpy(wav_src).unsqueeze(0).cuda()
     c = utils.get_content(cmodel, wav_src)
+    
     # 변환된 음성 생성
     audio = net_g.infer(c, g=g_tgt)
     audio = audio[0][0].data.cpu().float().numpy()
@@ -38,16 +62,8 @@ def get_output_name(style_pth, source_pth):
     return output_name
 
 def main():
-    print("Loading models...")
-    smodel = SpeakerEncoder('FreeVC/speaker_encoder/ckpt/pretrained_bak_5805000.pt').cuda()
-    hps = vc_utils.get_hparams_from_file('FreeVC/logs/freevc.json')
-    net_g = SynthesizerTrn(
-        hps.data.filter_length // 2 + 1,
-        hps.train.segment_size // hps.data.hop_length,
-        **hps.model).cuda()
-    _ = net_g.eval()
-    _ = vc_utils.load_checkpoint('FreeVC/checkpoints/freevc.pth', net_g, None, True)
-    cmodel = vc_utils.get_cmodel(0)
+    # 모델 로드
+    smodel, net_g, cmodel, hps = load_freevc_models()
 
     # 출력 디렉토리 생성
     output_dir = "data/FreeVC_noise"
@@ -73,8 +89,10 @@ def main():
         
         # voice conversion 수행
         converted_audio = vc_infer(source_path, style_path, smodel, cmodel, net_g, hps, vc_utils)
+
         # 변환된 음성 저장
         sf.write(output_path, converted_audio, hps.data.sampling_rate)
+
         # 경로 정보 저장
         updated_pairs.append(f"{style_path} {source_path} {output_path}\n")
     

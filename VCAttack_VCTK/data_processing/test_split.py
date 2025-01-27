@@ -3,47 +3,47 @@ import random
 from tqdm import tqdm
 import sys
 import soundfile as sf
+import torch
 import torchaudio
 import argparse
 import glob
+
 sys.path.append(os.path.abspath("."))
 sys.path.append(os.path.abspath("FreeVC"))
+sys.path.append(os.path.abspath("knn-vc"))
+sys.path.append(os.path.join(os.path.abspath("knn-vc"), "hifigan"))
 sys.path.append(os.path.abspath("VC_inference"))
 sys.path.append(os.path.abspath("evaluation"))
 
-from FreeVC_inference import vc_infer, get_output_name
-from speaker_encoder.voice_encoder import SpeakerEncoder
-from models import SynthesizerTrn
 from FreeVC import utils as vc_utils
-# from PH_inference import ph_infer, get_output_name
-
+from FreeVC_inference import load_freevc_models, vc_infer, get_output_name
+from PH_inference import load_ph_models, ph_infer
 from evaluation import UnifiedEvaluator
 
 os.environ["NUMBA_DISABLE_ERROR_MESSAGE"] = "1" 
 os.environ["NUMBA_LOG_LEVEL"] = "WARNING"      
 
-def load_freevc_models():
-    print("Loading FreeVC models...")
-    smodel = SpeakerEncoder('FreeVC/speaker_encoder/ckpt/pretrained_bak_5805000.pt').cuda()
-    hps = vc_utils.get_hparams_from_file('FreeVC/logs/freevc.json')
-    net_g = SynthesizerTrn(
-        hps.data.filter_length // 2 + 1,
-        hps.train.segment_size // hps.data.hop_length,
-        **hps.model).cuda()
-    _ = net_g.eval()
-    _ = vc_utils.load_checkpoint('FreeVC/checkpoints/freevc.pth', net_g, None, True)
-    cmodel = vc_utils.get_cmodel(0)
-      
-    return smodel, net_g, cmodel, hps
+def process_conversion(source_path, style_path, model_type, models, model_infer):
+    """
+    모델 타입에 따라 voice conversion을 수행하는 함수
+    
+    Args:
+        source_path: 소스 오디오 경로
+        style_path: 스타일 오디오 경로
+        model_type: 모델 타입 ('FreeVC' or 'PH')
+        models: 로드된 모델들 (FreeVC: (smodel, net_g, cmodel, hps), PH: knn_vc)
+        model_infer: 변환 함수
+    """
+    if model_type == 'FreeVC':
+        smodel, net_g, cmodel, hps = models
+        return model_infer(source_path, style_path, smodel, cmodel, net_g, hps, vc_utils)
+    else:  # PH
+        knn_vc = models
+        return model_infer(source_path, style_path, knn_vc)
 
-def main(audio_output_dir, vctk_path, model_loader, model_infer):
+def main(audio_output_dir, vctk_path, model_type, model_loader, model_infer):
     """
     test.txt에서 pair 파일을 생성하고, VC를 수행한 뒤 ASV 검증하는 함수
-    Args:
-        audio_output_dir: F(x,t) wav 파일 저장 경로 ({VC_model}_original)
-        vctk_path : VCTK 데이터 경로
-        model_loader: VC 모델 로드 함수
-        model_infer: VC 모델 인퍼런스 함수
     """
     os.makedirs(audio_output_dir, exist_ok=True)
 
@@ -73,8 +73,7 @@ def main(audio_output_dir, vctk_path, model_loader, model_infer):
     print(len(m_spks), len(f_spks))
 
     # VC 모델 로드 
-    print("Loading VC models...")
-    smodel, net_g, cmodel, hps = model_loader() 
+    models = model_loader() 
 
     # ASV evaluator 초기화
     print("Initializing ASV evaluator...")
@@ -84,11 +83,6 @@ def main(audio_output_dir, vctk_path, model_loader, model_infer):
     threshold = 0.328  # RW-Voiceshield의 임계값
     eer = None  
     print(f"Using threshold: {threshold:.3f}")
-
-    # # threshold 계산 or 로드
-    # print("Getting ASV threshold...")
-    # threshold, eer = evaluator.get_or_calculate_threshold(vctk_path)
-    # print(f"Using threshold: {threshold:.3f} (EER: {eer:.3f})")
 
     # 남성 화자 처리
     for spk in tqdm(m_spks):
@@ -102,7 +96,9 @@ def main(audio_output_dir, vctk_path, model_loader, model_infer):
                     source_path = random.choice(lines)
                     if source_path.split("/")[-2] != spk:
                         break
-                out = model_infer(source_path, style_path, smodel, cmodel, net_g, hps, vc_utils)
+                        
+                # 모델 타입에 따라 적절한 변환 수행
+                out = process_conversion(source_path, style_path, model_type, models, model_infer)
                 out_path = 'out.wav'
                 sf.write(out_path, out, 16000)
 
@@ -120,11 +116,11 @@ def main(audio_output_dir, vctk_path, model_loader, model_infer):
                     os.rename(out_path, output_path_full)
 
                     # 원본 pairs 파일에 기록
-                    with open(f"data/{args.model}_test_pairs.txt", "a") as f:
+                    with open(f"data/{model_type}_test_pairs.txt", "a") as f:
                         f.writelines([f"{style_path} {source_path}\n"])
                     
                     # adversarial pairs 파일에 기록
-                    with open(f"data/{args.model}_test_pairs_adv.txt", "a") as f:
+                    with open(f"data/{model_type}_test_pairs_adv.txt", "a") as f:
                         f.writelines([f"{source_path} {style_path} {adv_path}\n"])
 
                     i = i + 1
@@ -144,7 +140,9 @@ def main(audio_output_dir, vctk_path, model_loader, model_infer):
                     source_path = random.choice(lines)
                     if source_path.split("/")[-2] != spk:
                         break
-                out = model_infer(source_path, style_path, smodel, cmodel, net_g, hps, vc_utils)
+                        
+                # 모델 타입에 따라 적절한 변환 수행
+                out = process_conversion(source_path, style_path, model_type, models, model_infer)
                 out_path = 'out.wav'
                 sf.write(out_path, out, 16000)
 
@@ -162,11 +160,11 @@ def main(audio_output_dir, vctk_path, model_loader, model_infer):
                     os.rename(out_path, output_path_full)
 
                     # 원본 pairs 파일에 기록
-                    with open(f"data/{args.model}_test_pairs.txt", "a") as f:
+                    with open(f"data/{model_type}_test_pairs.txt", "a") as f:
                         f.writelines([f"{style_path} {source_path}\n"])
                     
                     # adversarial pairs 파일에 기록
-                    with open(f"data/{args.model}_test_pairs_adv.txt", "a") as f:
+                    with open(f"data/{model_type}_test_pairs_adv.txt", "a") as f:
                         f.writelines([f"{source_path} {style_path} {adv_path}\n"])
 
                     i = i + 1
@@ -194,6 +192,7 @@ if __name__ == '__main__':
     main(
         audio_output_dir=audio_output_dir,
         vctk_path=vctk_path,
+        model_type=args.model,
         model_loader=model_loader,
         model_infer=model_infer
     )

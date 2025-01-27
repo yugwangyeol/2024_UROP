@@ -12,7 +12,7 @@ def process_audio_file(noise_encoder, input_path, output_path, device):
     # 노이즈 적용
     with torch.no_grad():
         noise = noise_encoder(waveform)
-        noisy_waveform = torch.clamp(waveform + 0.7 * noise, -1, 1)
+        noisy_waveform = torch.clamp(waveform + noise, -1, 1)
     # 저장
     torchaudio.save(output_path, noisy_waveform.squeeze(0).cpu(), sample_rate)
     return output_path
