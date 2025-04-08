@@ -27,22 +27,6 @@ class UnifiedEvaluator:
     def evaluate_stoi(self, ref, deg, rate):
         return stoi(ref, deg, rate, extended=False)
 
-    def evaluate_snr(self, ref, deg):
-        min_len = min(len(ref), len(deg))
-        ref = ref[:min_len]
-        deg = deg[:min_len]
-        
-        signal_power = np.sum(ref ** 2)
-        noise_power = np.sum((deg - ref) ** 2)
-        
-        if noise_power < 1e-10:
-            return float('inf')
-        if signal_power < 1e-10:
-            return float('-inf')
-            
-        snr = 10 * np.log10(signal_power / noise_power)
-        return snr
-
     def extract_embedding(self, file_path):
         signal, sr = torchaudio.load(file_path)
         
@@ -99,7 +83,7 @@ class UnifiedEvaluator:
                         test_noisy_pairs_path: str,
                         threshold: float) -> Dict:
         results = {
-            'snrs': [], 'pesqs': [], 'stois': [],
+            'pesqs': [], 'stois': [],
             'asr_count': 0, 'psr_count': 0, 'total': 0
         }
 
@@ -123,11 +107,9 @@ class UnifiedEvaluator:
                 ref, ref_rate = librosa.load(x_path, sr=16000)
                 deg, deg_rate = librosa.load(x_prime_path, sr=16000)
 
-                snr_score = self.evaluate_snr(ref, deg)
                 pesq_score = self.evaluate_pesq(ref, deg, ref_rate)
                 stoi_score = self.evaluate_stoi(ref, deg, ref_rate)
 
-                results['snrs'].append(snr_score)
                 results['pesqs'].append(pesq_score)
                 results['stois'].append(stoi_score)
 
@@ -143,8 +125,7 @@ class UnifiedEvaluator:
                 print(f"\nError processing pair {i+1}: {str(e)}")
                 continue
 
-        # SNR, PESQ, STOI에 대한 평균, 신뢰구간 계산
-        snr_mean, snr_ci = self.calculate_statistics(results['snrs'])
+        # PESQ, STOI에 대한 평균, 신뢰구간 계산
         pesq_mean, pesq_ci = self.calculate_statistics(results['pesqs'])
         stoi_mean, stoi_ci = self.calculate_statistics(results['stois'])
         
@@ -153,10 +134,6 @@ class UnifiedEvaluator:
         psr_mean, psr_ci = self.wilson_score_interval(results['psr_count'], results['total'])
 
         final_results = {
-            'SNR': {
-                'mean': snr_mean,
-                'ci': snr_ci,
-            },
             'PESQ': {
                 'mean': pesq_mean,
                 'ci': pesq_ci,
@@ -180,12 +157,17 @@ class UnifiedEvaluator:
 
 def main():
     parser = argparse.ArgumentParser(description='VCAttack evaluation')
-    parser.add_argument('--model', type=str, choices=['FreeVC', 'PH'], default='FreeVC',
-                      help='Type of voice conversion model (FreeVC or PH)')
+    parser.add_argument('--model', type=str, choices=['FreeVC', 'TriAAN-VC'], default='FreeVC',
+                    help='Type of voice conversion model (FreeVC or TriAAN-VC)')
+    parser.add_argument('--attack_type', type=str, choices=['white', 'black'], default='white',
+                    help='Type of attack (white-box or black-box)')
     args = parser.parse_args()
 
+    # attack_type을 w/b로 축약
+    attack_abbr = 'w' if args.attack_type == 'white' else 'b'
+
     test_pairs_path = f"data/{args.model}_test_pairs.txt"
-    test_noisy_pairs_path = f"data/{args.model}_test_noisy_pairs.txt"
+    test_noisy_pairs_path = f"data/{args.model}_test_noisy_pairs_{attack_abbr.upper()}.txt"
     
     evaluator = UnifiedEvaluator(device='cuda')
     threshold = 0.328  # RW-Voiceshield의 임계값
@@ -203,7 +185,7 @@ def main():
     print(f"Model: {args.model}")
     print(f"Total pairs evaluated: {results['total_evaluated']}")
     
-    metrics = ['SNR', 'PESQ', 'STOI', 'ASR', 'PSR']
+    metrics = ['PESQ', 'STOI', 'ASR', 'PSR']
     for metric in metrics:
         print(f"\n{metric}:")
         print(f"  {results[metric]['mean']:.3f} [{results[metric]['ci'][0]:.3f}, {results[metric]['ci'][1]:.3f}]")

@@ -10,36 +10,34 @@ import glob
 
 sys.path.append(os.path.abspath("."))
 sys.path.append(os.path.abspath("FreeVC"))
-sys.path.append(os.path.abspath("knn-vc"))
-sys.path.append(os.path.join(os.path.abspath("knn-vc"), "hifigan"))
 sys.path.append(os.path.abspath("VC_inference"))
 sys.path.append(os.path.abspath("evaluation"))
 
 from FreeVC import utils as vc_utils
-from FreeVC_inference import load_freevc_models, vc_infer, get_output_name
-from PH_inference import load_ph_models, ph_infer
+from FreeVC_inference import load_freevc_models, freevc_infer, get_output_name
+from TriAANVC_inference import load_triaanvc_models, triaanvc_infer, get_output_name
 from evaluation import UnifiedEvaluator
 
 os.environ["NUMBA_DISABLE_ERROR_MESSAGE"] = "1" 
 os.environ["NUMBA_LOG_LEVEL"] = "WARNING"      
 
-def process_conversion(source_path, style_path, model_type, models, model_infer):
+def process_conversion(contents_path, style_path, model_type, models, model_infer):
     """
     모델 타입에 따라 voice conversion을 수행하는 함수
     
     Args:
-        source_path: 소스 오디오 경로
+        contents_path: 콘텐츠 오디오 경로
         style_path: 스타일 오디오 경로
-        model_type: 모델 타입 ('FreeVC' or 'PH')
-        models: 로드된 모델들 (FreeVC: (smodel, net_g, cmodel, hps), PH: knn_vc)
+        model_type: 모델 타입 ('FreeVC' or 'TriAAN-VC')
+        models: 로드된 모델들 (FreeVC: (smodel, net_g, cmodel, hps), TriAAN-VC : ())
         model_infer: 변환 함수
     """
     if model_type == 'FreeVC':
         smodel, net_g, cmodel, hps = models
-        return model_infer(source_path, style_path, smodel, cmodel, net_g, hps, vc_utils)
-    else:  # PH
-        knn_vc = models
-        return model_infer(source_path, style_path, knn_vc)
+        return model_infer(contents_path, style_path, smodel, cmodel, net_g, hps, vc_utils)
+    else:  # TriAAN-VC 
+        model, cfg, mean, std = models
+        return model_infer(contents_path, style_path, model, cfg, mean, std)
 
 def main(audio_output_dir, vctk_path, model_type, model_loader, model_infer):
     """
@@ -93,12 +91,12 @@ def main(audio_output_dir, vctk_path, model_type, model_loader, model_infer):
         for style_path in wavs:
             for j in range(10):
                 while True:
-                    source_path = random.choice(lines)
-                    if source_path.split("/")[-2] != spk:
+                    contents_path = random.choice(lines)
+                    if contents_path.split("/")[-2] != spk:
                         break
                         
                 # 모델 타입에 따라 적절한 변환 수행
-                out = process_conversion(source_path, style_path, model_type, models, model_infer)
+                out = process_conversion(contents_path, style_path, model_type, models, model_infer)
                 out_path = 'out.wav'
                 sf.write(out_path, out, 16000)
 
@@ -111,17 +109,17 @@ def main(audio_output_dir, vctk_path, model_type, model_loader, model_infer):
                             break
 
                     # 검증 성공 시 오디오 저장 및 pair 추가
-                    output_name = get_output_name(style_path, source_path)
+                    output_name = get_output_name(style_path, contents_path)
                     output_path_full = os.path.join(audio_output_dir, output_name)
                     os.rename(out_path, output_path_full)
 
                     # 원본 pairs 파일에 기록
                     with open(f"data/{model_type}_test_pairs.txt", "a") as f:
-                        f.writelines([f"{style_path} {source_path}\n"])
+                        f.writelines([f"{style_path} {contents_path}\n"])
                     
                     # adversarial pairs 파일에 기록
                     with open(f"data/{model_type}_test_pairs_adv.txt", "a") as f:
-                        f.writelines([f"{source_path} {style_path} {adv_path}\n"])
+                        f.writelines([f"{contents_path} {style_path} {adv_path}\n"])
 
                     i = i + 1
                     break
@@ -137,12 +135,12 @@ def main(audio_output_dir, vctk_path, model_type, model_loader, model_infer):
         for style_path in wavs:
             for j in range(10):
                 while True:
-                    source_path = random.choice(lines)
-                    if source_path.split("/")[-2] != spk:
+                    contents_path = random.choice(lines)
+                    if contents_path.split("/")[-2] != spk:
                         break
                         
                 # 모델 타입에 따라 적절한 변환 수행
-                out = process_conversion(source_path, style_path, model_type, models, model_infer)
+                out = process_conversion(contents_path, style_path, model_type, models, model_infer)
                 out_path = 'out.wav'
                 sf.write(out_path, out, 16000)
 
@@ -155,17 +153,17 @@ def main(audio_output_dir, vctk_path, model_type, model_loader, model_infer):
                             break
 
                     # 검증 성공 시 오디오 저장 및 pair 추가
-                    output_name = get_output_name(style_path, source_path)
+                    output_name = get_output_name(style_path, contents_path)
                     output_path_full = os.path.join(audio_output_dir, output_name)
                     os.rename(out_path, output_path_full)
 
                     # 원본 pairs 파일에 기록
                     with open(f"data/{model_type}_test_pairs.txt", "a") as f:
-                        f.writelines([f"{style_path} {source_path}\n"])
+                        f.writelines([f"{style_path} {contents_path}\n"])
                     
                     # adversarial pairs 파일에 기록
                     with open(f"data/{model_type}_test_pairs_adv.txt", "a") as f:
-                        f.writelines([f"{source_path} {style_path} {adv_path}\n"])
+                        f.writelines([f"{contents_path} {style_path} {adv_path}\n"])
 
                     i = i + 1
                     break
@@ -175,8 +173,8 @@ def main(audio_output_dir, vctk_path, model_type, model_loader, model_infer):
                                      
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Voice conversion pair creation')
-    parser.add_argument('--model', type=str, choices=['FreeVC', 'PH'], default='FreeVC',
-                      help='Type of voice conversion model (FreeVC or PH)')
+    parser.add_argument('--model', type=str, choices=['FreeVC', 'TriAAN-VC'], default='FreeVC',
+                      help='Type of voice conversion model (FreeVC or TriAAN-VC)')
     args = parser.parse_args()
 
     audio_output_dir = f"data/{args.model}_original"
@@ -184,10 +182,10 @@ if __name__ == '__main__':
 
     if args.model == "FreeVC":
         model_loader = load_freevc_models
-        model_infer = vc_infer
-    else:  # PH
-        model_loader = load_ph_models
-        model_infer = ph_infer
+        model_infer = freevc_infer
+    else:  # TriAAN-VC
+        model_loader = load_triaanvc_models
+        model_infer = triaanvc_infer
     
     main(
         audio_output_dir=audio_output_dir,

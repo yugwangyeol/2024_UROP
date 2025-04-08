@@ -12,24 +12,30 @@ def process_audio_file(noise_encoder, input_path, output_path, device):
     # 노이즈 적용
     with torch.no_grad():
         noise = noise_encoder(waveform)
-        noisy_waveform = torch.clamp(waveform + noise, -1, 1)
+        noisy_waveform = torch.clamp(waveform + noise * 0.7, -1, 1)
     # 저장
     torchaudio.save(output_path, noisy_waveform.squeeze(0).cpu(), sample_rate)
     return output_path
 
 def main():
     parser = argparse.ArgumentParser(description='Add noise to test dataset pairs')
-    parser.add_argument('--model', type=str, choices=['FreeVC', 'PH'], default='FreeVC',
-                      help='Type of voice conversion model (FreeVC or PH)')
+    parser.add_argument('--model', type=str, choices=['FreeVC', 'TriAAN-VC'], default='FreeVC',
+                      help='Type of voice conversion model (FreeVC or TriAAN-VC)')
+    parser.add_argument('--attack_type', type=str, choices=['white', 'black'], default='white',
+                      help='Type of attack (white-box or black-box)')
     args = parser.parse_args()
 
     # 모델 경로 설정
-    model_path = "model/checkpoints/generator.pth"
+    feature_extractor = "wavlm" if args.attack_type == 'white' else "hubert"
+    model_path = f"model/checkpoints/generator_{feature_extractor}.pth"
+
+    # attack_type을 w/b로 축약
+    attack_abbr = 'w' if args.attack_type == 'white' else 'b'
 
     # 입출력 경로 설정
     input_pairs_file = f"data/{args.model}_test_pairs.txt"
-    output_pairs_file = f"data/{args.model}_test_noisy_pairs.txt"
-    output_wav_dir = f"data/{args.model}_noisy_style"
+    output_pairs_file = f"data/{args.model}_test_noisy_pairs_{attack_abbr.upper()}.txt"
+    output_wav_dir = f"data/{args.model}_noisy_style_{attack_abbr.upper()}"
     
     # 출력 디렉토리 생성
     if not os.path.exists(output_wav_dir):
@@ -50,8 +56,8 @@ def main():
     # 새로운 쌍을 저장할 리스트
     new_pairs = []
     
-    # 각 소스 파일에 대해 처리
-    for i, (style_path, source_path) in enumerate(pairs):
+    # 각 콘텐츠 파일에 대해 처리
+    for i, (style_path, contents_path) in enumerate(pairs):
         style_filename = os.path.splitext(os.path.basename(style_path))[0]
         wav_name = f"noisy_{style_filename}.wav"
         output_wav_path = os.path.join(output_wav_dir, wav_name)  
@@ -60,7 +66,7 @@ def main():
         try:
             processed_path = process_audio_file(noise_encoder, style_path, output_wav_path, device)
             # 새로운 쌍 추가
-            new_pairs.append(f"{processed_path} {source_path}\n")
+            new_pairs.append(f"{processed_path} {contents_path}\n")
         except Exception as e:
             print(f"파일 처리 중 오류 발생 ({style_path}): {str(e)}")
     
