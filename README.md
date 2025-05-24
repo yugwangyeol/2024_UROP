@@ -9,5 +9,34 @@ Voice conversion (VC) enables natural speech synthesis with minimal data; howeve
 
 ## Demo
 
-## How to Use
+You can find our Demo here
 
+## How to Use
+### 1. Clone the repository
+```bash
+git clone https://github.com/yugwangyeol/Mimic-Blocker.git
+cd Mimic-Blocker
+```
+```bash
+git clone https://github.com/OlaWod/FreeVC.git
+```
+Download WavLM-Large and put it under directory 'wavlm/'
+```bash
+git clone https://github.com/winddori2002/TriAAN-VC.git
+```
+
+### 2. Install requirements
+```bash
+pip install -r requirements.txt --no-deps
+pip install "typing-extensions<4.6.0"
+```
+
+### 3. Download VCTK Dataset
+``` python
+import torch
+import torchaudio
+
+torchaudio.datasets.VCTK_092(root="data", download=True)
+```
+
+### 

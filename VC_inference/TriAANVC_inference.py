@@ -156,20 +156,17 @@ def get_output_name(style_pth, contents_pth):
 
 def main():
     parser = argparse.ArgumentParser(description='Voice conversion for noisy pairs')
-    parser.add_argument('--attack_type', type=str, choices=['white', 'black'], default='white',
-                    help='Type of attack (white-box or black-box)')
+    parser.add_argument('--feature_extractor', type=str, choices=['wavlm', 'hubert'], required=True,
+                        help='Type of feature extractor (wavlm or hubert)')
     args = parser.parse_args()
-
-    # attack_type을 w/b로 축약
-    attack_abbr = 'w' if args.attack_type == 'white' else 'b'
 
     # 경로 설정
     config_path = 'TriAAN-VC/config/base.yaml'
     checkpoint_path = 'TriAAN-VC/checkpoints'
     model_name = 'model-cpc-split.pth'
     device = 'cuda:0'
-    output_dir = f'data/TriAAN-VC_noise_{attack_abbr.upper()}'
-    pairs_file = f'data/TriAAN-VC_test_noisy_pairs_{attack_abbr.upper()}.txt'
+    output_dir = f'data/TriAAN-VC_converted_{args.feature_extractor}'
+    pairs_file = f'data/TriAAN-VC_test_noisy_pairs_{args.feature_extractor}.txt'
     
     # 출력 디렉토리 생성
     os.makedirs(output_dir, exist_ok=True)

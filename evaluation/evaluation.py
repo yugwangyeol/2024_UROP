@@ -2,7 +2,6 @@ import os
 import torch
 import torchaudio
 import numpy as np
-import random 
 from scipy import stats
 import librosa
 from pesq import pesq
@@ -160,29 +159,15 @@ def main():
     parser = argparse.ArgumentParser(description='VCAttack evaluation')
     parser.add_argument('--model', type=str, choices=['FreeVC', 'TriAAN-VC'], default='FreeVC',
                     help='Type of voice conversion model (FreeVC or TriAAN-VC)')
-    parser.add_argument('--attack_type', type=str, choices=['white', 'black'], default='white',
-                    help='Type of attack (white-box or black-box)')
-    parser.add_argument('--seed', type=int, default=None,
-                    help='Random seed for reproducibility')
+    parser.add_argument('--feature_extractor', type=str, choices=['wavlm', 'hubert'], default='wavlm',
+                        help='Type of feature extractor (wavlm or hubert). Corresponds to white-box (wavlm) or black-box (hubert) attack setups.')
     args = parser.parse_args()
 
-    # 시드 설정 (인자로 제공된 경우)
-    if args.seed is not None:
-        torch.manual_seed(args.seed)
-        torch.cuda.manual_seed(args.seed)
-        np.random.seed(args.seed)
-        random.seed(args.seed)
-        torch.backends.cudnn.deterministic = True
-        print(f"시드가 {args.seed}로 설정되었습니다.")
-
-    # attack_type을 w/b로 축약
-    attack_abbr = 'w' if args.attack_type == 'white' else 'b'
-
     test_pairs_path = f"data/{args.model}_test_pairs.txt"
-    test_noisy_pairs_path = f"data/{args.model}_test_noisy_pairs_{attack_abbr.upper()}.txt"
+    test_noisy_pairs_path = f"data/{args.model}_test_noisy_pairs_{args.feature_extractor}.txt"
     
     evaluator = UnifiedEvaluator(device='cuda')
-    threshold = 0.328  # RW-Voiceshield의 임계값
+    threshold = 0.328  
     
     print("\nEvaluating all metrics...")
     print(f"Model: {args.model}")
@@ -200,7 +185,7 @@ def main():
     metrics = ['PESQ', 'STOI', 'ASR', 'PSR']
     for metric in metrics:
         print(f"\n{metric}:")
-        print(f"  {results[metric]['mean']:.10f} [{results[metric]['ci'][0]:.10f}, {results[metric]['ci'][1]:.10f}]")
+        print(f"  {results[metric]['mean']:.3f} [{results[metric]['ci'][0]:.3f}, {results[metric]['ci'][1]:.3f}]")
 
 if __name__ == "__main__":
     main()

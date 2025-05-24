@@ -2,8 +2,6 @@ import torch
 import torchaudio
 import os
 import argparse
-import numpy as np  
-import random      
 from model import Generator as NoiseEncoder
 
 def process_audio_file(noise_encoder, input_path, output_path, device):
@@ -23,31 +21,17 @@ def main():
     parser = argparse.ArgumentParser(description='Add noise to test dataset pairs')
     parser.add_argument('--model', type=str, choices=['FreeVC', 'TriAAN-VC'], default='FreeVC',
                       help='Type of voice conversion model (FreeVC or TriAAN-VC)')
-    parser.add_argument('--attack_type', type=str, choices=['white', 'black'], default='white',
-                      help='Type of attack (white-box or black-box)')
-    parser.add_argument('--seed', type=int, default=None,
-                      help='Random seed for reproducibility')
+    parser.add_argument('--feature_extractor', type=str, choices=['wavlm', 'hubert'], required=True,
+                      help='Type of feature extractor (wavlm or hubert)')
     args = parser.parse_args()
 
-    # 시드 설정 (인자로 제공된 경우)
-    if args.seed is not None:
-        torch.manual_seed(args.seed)
-        torch.cuda.manual_seed(args.seed)
-        np.random.seed(args.seed)
-        random.seed(args.seed)
-        torch.backends.cudnn.deterministic = True
-
     # 모델 경로 설정
-    feature_extractor = "wavlm" if args.attack_type == 'white' else "hubert"
-    model_path = f"model/checkpoints/generator_{feature_extractor}.pth"
-
-    # attack_type을 w/b로 축약
-    attack_abbr = 'w' if args.attack_type == 'white' else 'b'
+    model_path = f"model/checkpoints/generator_{args.feature_extractor}.pth"
 
     # 입출력 경로 설정
     input_pairs_file = f"data/{args.model}_test_pairs.txt"
-    output_pairs_file = f"data/{args.model}_test_noisy_pairs_{attack_abbr.upper()}.txt"
-    output_wav_dir = f"data/{args.model}_noisy_style_{attack_abbr.upper()}"
+    output_pairs_file = f"data/{args.model}_test_noisy_pairs_{args.feature_extractor}.txt"
+    output_wav_dir = f"data/{args.model}_noisy_style_{args.feature_extractor}"
     
     # 출력 디렉토리 생성
     if not os.path.exists(output_wav_dir):
@@ -88,8 +72,7 @@ def main():
     
     print(f"\n처리된 파일 쌍이 {output_pairs_file}에 저장되었습니다.")
     print(f"총 {len(new_pairs)}개의 쌍이 생성되었습니다.")
-    if args.seed is not None:
-        print(f"시드 {args.seed}로 실행되었습니다.")
+
 
 if __name__ == "__main__":
     main()
