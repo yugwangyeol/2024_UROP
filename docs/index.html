@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mimic Blocker: Self-Supervised Adversarial Voice Conversion Defense</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            line-height: 1.5;
+            color: #000;
+            background: #fff;
+            min-height: 100vh;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: #fff;
+            padding: 30px;
+            margin-bottom: 20px;
+            text-align: center;
+            border-bottom: 2px solid #000;
+        }
+
+        .title {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 15px;
+        }
+
+        .authors {
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .author {
+            display: inline-block;
+            margin: 0 10px;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .author:hover {
+            text-decoration: underline;
+        }
+
+        sup {
+            font-size: 0.7em;
+            vertical-align: super;
+            color: #000;
+        }
+
+        .affiliation {
+            font-size: 1em;
+            color: #555;
+            font-style: italic;
+        }
+
+        .section {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+        }
+
+        .abstract {
+            font-size: 1em;
+            line-height: 1.6;
+            text-align: justify;
+            color: #000;
+        }
+
+        .demo-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+
+        .demo-table th,
+        .demo-table td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ccc;
+        }
+
+        .demo-table th {
+            background: #f4f4f4;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .demo-table td {
+            vertical-align: middle;
+        }
+
+        .demo-title {
+            font-size: 1em;
+            font-weight: normal;
+            color: #000;
+            margin-bottom: 8px;
+        }
+
+        .audio-player {
+            width: 100%;
+            max-width: 200px;
+            margin: 5px auto;
+            display: block;
+        }
+
+        .image-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .result-image {
+            max-width: 80%;
+            height: auto;
+            border: 1px solid #ccc;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #555;
+            font-size: 0.9em;
+            border-top: 1px solid #ccc;
+        }
+
+        .footer a {
+            color: #000;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .title {
+                font-size: 1.5em;
+            }
+
+            .section {
+                padding: 15px;
+            }
+
+            .demo-table {
+                font-size: 0.8em;
+            }
+
+            .audio-player {
+                max-width: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <h1 class="title">Mimic Blocker: Self-Supervised Adversarial Voice Conversion Defense</h1>
+            <div class="authors">
+                <a href="#" class="author" target="_blank">Gwangyeol Yu</a><sup>*</sup>
+                <a href="#" class="author" target="_blank">Junhyeok Lee</a><sup>*</sup>
+                <a href="#" class="author" target="_blank">Seoryeong Kim</a><sup>*</sup>
+                <a href="#" class="author" target="_blank">Jimin Lee</a>
+                <a href="#" class="author" target="_blank">Jehyuk Lee</a><sup>†</sup>
+            </div>
+            <div class="affiliation">Kookmin University, Seoul, South Korea</div>
+        </div>
+
+        <!-- Abstract Section -->
+        <div class="section">
+            <h2 class="section-title">Abstract</h2>
+            <div class="abstract">
+                Voice conversion (VC) enables natural speech synthesis with minimal data however, it poses security risks, e.g., identity theft and privacy breaches. To address this, we propose Mimic Blocker, an active defense mechanism that prevents VC models from extracting speaker characteristics while preserving audio quality. Our method employs adversarial training, an audio quality preservation strategy, and an attack strategy. It relies on only publicly available pretrained feature extractors, which ensures model-agnostic protection. Furthermore, it enables self-supervised learning using only the original speaker's speech. Experimental results demonstrate that our method achieves robust defense performance in both white-box and black-box scenarios. Notably, the proposed approach maintains audio quality by generating noise imperceptible to human listeners, thereby enabling protection while retaining natural voice characteristics in practical applications.
+            </div>
+        </div>
+
+        <!-- Model Architecture Section -->
+        <div class="section">
+            <h2 class="section-title">Model Architecture</h2>
+            <div class="image-container">
+                <img src="images/architecture.png" alt="Model Architecture" class="result-image">
+            </div>
+            <p>Training and testing stage of Mimic Blocker. The red arrows represent the computational pathways used to calculate the loss
+                functions.</p>
+        </div>
+        <!-- Audio Demos Section -->
+        <div class="section">
+            <h2 class="section-title">Audio Demos</h2>
+            
+            <h3 class="subsection-title">White Box</h3>
+            <table class="demo-table">
+                <thead>
+                    <tr>
+                        <th>Style WAV</th>
+                        <th>Org Output</th>
+                        <th>Adv WAV</th>
+                        <th>Adv Output</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="demo-title">Sample 1</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample1/p246_133_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 1</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample1/p246_133_mic1_p284_330_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 1</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample1/noisy_p246_133_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 1</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample1/noisy_p246_133_mic1_p284_330_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="demo-title">Sample 2</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample2/p246_227_mic2.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 2</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample2/p246_227_mic2_p305_245_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 2</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample2/noisy_p246_227_mic2.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 2</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample2/noisy_p246_227_mic2_p305_245_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="demo-title">Sample 3</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample3/noisy_p253_058_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 3</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample3/p253_058_mic1_p335_162_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 3</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample3/noisy_p253_058_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 3</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample3/noisy_p253_058_mic1_p335_162_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="demo-title">Sample 4</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample4/p253_161_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 4</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample4/p253_161_mic1_p251_330_mic2.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 4</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample4/noisy_p253_161_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 4</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/WhiteBox/Sample4/noisy_p253_161_mic1_p251_330_mic2.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 class="subsection-title">Black Box</h3>
+            <table class="demo-table">
+                <thead>
+                    <tr>
+                        <th>Style WAV</th>
+                        <th>Org Output</th>
+                        <th>Adv WAV</th>
+                        <th>Adv Output</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="demo-title">Sample 1</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample1/p246_295_mic2.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 1</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample1/p246_295_mic2_p298_344_mic2.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 1</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample1/noisy_p246_295_mic2.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 1</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample1/noisy_p246_295_mic2_p298_344_mic2.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="demo-title">Sample 2</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample2/p251_174_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 2</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample2/p251_174_mic1_p253_141_mic2.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 2</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample2/noisy_p251_174_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 2</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample2/noisy_p251_174_mic1_p253_141_mic2.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="demo-title">Sample 3</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample3/p282_058_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 3</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample3/p282_058_mic1_p246_258_mic2.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 3</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample3/noisy_p282_058_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 3</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample3/noisy_p282_058_mic1_p246_258_mic2.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="demo-title">Sample 4</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample4/p269_207_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 4</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample4/p269_207_mic1_p298_085_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 4</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample4/noisy_p269_207_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                        <td>
+                            <div class="demo-title">Sample 4</div>
+                            <audio class="audio-player" controls>
+                                <source src="./audio/BlackBox/Sample4/noisy_p269_207_mic1_p298_085_mic1.wav" type="audio/wav">
+                                Browser does not support audio.
+                            </audio>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div>
+            <a href="mailto:contact@example.com">Contact</a>
+            <a href="https://github.com/username/repo">GitHub</a>
+            <a href="https://arxiv.org/abs/example">arXiv</a>
+        </div>
+    </div>
+
+    <script>
+        // Audio playback function
+        function playAudio(audioId) {
+            console.log(`Playing audio: ${audioId}`);
+        }
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>
