@@ -14,6 +14,50 @@ Voice conversion (VC) enables natural speech synthesis with minimal data; howeve
 
 You can find our [Demo]() here
 
+## Project Structure
+
+```
+Mimic-Blocker/
+│
+├── requirements.txt
+│
+├── FreeVC/ (utils.py updated)                
+│
+├── TriAAN-VC/ (src/vocoder.py, config/base.yaml updated)
+│
+├── data/
+│   ├── VCTK-Corpus-0.92/                     
+│   ├── {FreeVC/TriAAN-VC}_original/          
+│   ├── {FreeVC/TriAAN-VC}_noise_{wavlm/hubert}/ 
+│   ├── {FreeVC/TriAAN-VC}_noisy_style_{wavlm/hubert}/ 
+│   ├── {FreeVC/TriAAN-VC}_test_pairs_{wavlm/hubert}.txt 
+│   ├── {FreeVC/TriAAN-VC}_test_noisy_pairs_{wavlm/hubert}.txt 
+│   ├── train.txt                             
+│   ├── val.txt                                
+│   └── test.txt                               
+│
+├── model/
+│   ├── checkpoints/                          
+│   │   └── generator_{wavlm/hubert}.pth
+│   ├── inference.py                          
+│   ├── main.py                               
+│   ├── model.py                              
+│   ├── train.py                              
+│   └── single_audio_inference.py             
+│
+├── VC_inference/
+│   ├── Freevc_inference.py                   
+│   └── TriAANVC_inference.py                 
+│
+├── evaluation/  
+│   ├── pretrained models/                    
+│   └── evaluation.py                         
+│
+└── data_processing/ 
+    ├── test_split.py                         
+    └── train_test_split.py                   
+```
+
 ## Pre-requisites
 ### 1. Clone the repository
 ```bash
