@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mimic Blocker: Self-Supervised Adversarial Voice Conversion Defense</title>
+    <title> Mimic Blocker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&family=Source+Sans+Pro:wght@400;500&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -12,177 +13,309 @@
         }
 
         body {
-            font-family: 'Times New Roman', Times, serif;
-            line-height: 1.5;
-            color: #000;
-            background: #fff;
+            font-family: 'Source Sans Pro', sans-serif;
+            line-height: 1.7;
+            color: #1a2d34;
+            background: linear-gradient(135deg, #f9f7f2, #e0f2f4);
             min-height: 100vh;
             font-size: 16px;
+            overflow-x: hidden;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1280px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 40px 20px;
         }
 
         .header {
-            background: #fff;
-            padding: 30px;
-            margin-bottom: 20px;
+            background: linear-gradient(135deg, #2a2a72, #4db6ac);
+            color: #ffffff;
+            padding: 50px 20px;
+            margin-bottom: 40px;
             text-align: center;
-            border-bottom: 2px solid #000;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 1s ease-in-out;
         }
 
         .title {
-            font-size: 1.8em;
-            font-weight: bold;
-            color: #000;
-            margin-bottom: 15px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 2.8em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            line-height: 1.2;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .authors {
-            font-size: 1.1em;
-            color: #333;
-            margin-bottom: 10px;
+            font-size: 1.3em;
+            margin-bottom: 15px;
         }
 
         .author {
             display: inline-block;
-            margin: 0 10px;
+            margin: 0 15px;
             text-decoration: none;
-            color: #333;
+            color: #ffffff;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        .author::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -2px;
+            left: 0;
+            background: #e6b800;
+            transition: width 0.3s ease;
+        }
+
+        .author:hover::after {
+            width: 100%;
         }
 
         .author:hover {
-            text-decoration: underline;
+            color: #e6b800;
         }
 
         sup {
             font-size: 0.7em;
             vertical-align: super;
-            color: #000;
+            color: #ffffff;
+            opacity: 0.8;
         }
 
         .affiliation {
-            font-size: 1em;
-            color: #555;
+            font-size: 1.1em;
             font-style: italic;
+            color: #ffffff;
+            opacity: 0.9;
         }
 
         .section {
-            background: #fff;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid #ccc;
+            background: #ffffff;
+            padding: 40px;
+            margin-bottom: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            animation: slideUp 0.8s ease-out;
         }
 
         .section-title {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #000;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #000;
-            padding-bottom: 5px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 2em;
+            font-weight: 700;
+            color: #2a2a72;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #4db6ac;
+            padding-bottom: 10px;
+        }
+
+        .subsection-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.6em;
+            font-weight: 600;
+            color: #2a2a72;
+            margin: 30px 0 20px;
         }
 
         .abstract {
-            font-size: 1em;
-            line-height: 1.6;
+            font-size: 1.05em;
+            line-height: 1.8;
             text-align: justify;
-            color: #000;
+            color: #1a2d34;
         }
 
         .demo-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 0.9em;
+            margin-top: 25px;
+            font-size: 0.95em;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
         }
 
         .demo-table th,
         .demo-table td {
-            padding: 10px;
+            padding: 15px;
             text-align: center;
-            border: 1px solid #ccc;
+            border: 1px solid #dfe6e9;
         }
 
         .demo-table th {
-            background: #f4f4f4;
-            font-weight: bold;
-            color: #000;
+            background: linear-gradient(135deg, #2a2a72, #4db6ac);
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .demo-table td {
             vertical-align: middle;
+            background: #f8f9fa;
+            transition: background 0.3s ease;
+        }
+
+        .demo-table tr:hover td {
+            background: #e0f2f4;
         }
 
         .demo-title {
             font-size: 1em;
-            font-weight: normal;
-            color: #000;
-            margin-bottom: 8px;
+            font-weight: 500;
+            color: #1a2d34;
+            margin-bottom: 12px;
         }
 
         .audio-player {
             width: 100%;
-            max-width: 200px;
-            margin: 5px auto;
+            max-width: 240px;
+            margin: 10px auto;
             display: block;
+            border-radius: 8px;
+            outline: none;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .audio-player:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
         .image-container {
             text-align: center;
-            margin: 20px 0;
+            margin: 40px 0;
         }
 
         .result-image {
-            max-width: 80%;
+            max-width: 90%;
             height: auto;
-            border: 1px solid #ccc;
+            border-radius: 12px;
+            border: 2px solid #4db6ac;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .result-image:hover {
+            transform: scale(1.02);
         }
 
         .footer {
             text-align: center;
-            padding: 20px;
-            color: #555;
-            font-size: 0.9em;
-            border-top: 1px solid #ccc;
+            padding: 30px;
+            color: #ffffff;
+            font-size: 1em;
+            background: linear-gradient(135deg, #2a2a72, #4db6ac);
+            margin-top: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
         }
 
         .footer a {
-            color: #000;
+            color: #e6b800;
             text-decoration: none;
-            margin: 0 10px;
+            margin: 0 20px;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        .footer a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -2px;
+            left: 0;
+            background: #ffffff;
+            transition: width 0.3s ease;
+        }
+
+        .footer a:hover::after {
+            width: 100%;
         }
 
         .footer a:hover {
-            text-decoration: underline;
+            color: #ffffff;
         }
 
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive Design */
         @media (max-width: 768px) {
             .container {
-                padding: 10px;
-            }
-
-            .header {
                 padding: 20px;
             }
 
+            .header {
+                padding: 30px 15px;
+            }
+
             .title {
-                font-size: 1.5em;
+                font-size: 2.2em;
             }
 
             .section {
-                padding: 15px;
+                padding: 25px;
+            }
+
+            .section-title {
+                font-size: 1.7em;
+            }
+
+            .subsection-title {
+                font-size: 1.4em;
             }
 
             .demo-table {
-                font-size: 0.8em;
+                font-size: 0.9em;
+            }
+
+            .demo-table th,
+            .demo-table td {
+                padding: 12px;
             }
 
             .audio-player {
-                max-width: 150px;
+                max-width: 200px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .demo-table {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .title {
+                font-size: 1.8em;
+            }
+
+            .authors {
+                font-size: 1.1em;
+            }
+
+            .audio-player {
+                max-width: 100%;
+            }
+
+            .result-image {
+                max-width: 100%;
             }
         }
     </style>
@@ -190,167 +323,167 @@
 <body>
     <div class="container">
         <!-- Header Section -->
-        <div class="header">
-            <h1 class="title">Mimic Blocker: Self-Supervised Adversarial Voice Conversion Defense</h1>
+        <header class="header" role="banner">
+            <h1 class="title">Mimic Blocker: Self-Supervised Adversarial Training for Voice Conversion Defense with Pretrained Feature Extractors</h1>
             <div class="authors">
-                <a href="#" class="author" target="_blank">Gwangyeol Yu</a><sup>*</sup>
-                <a href="#" class="author" target="_blank">Junhyeok Lee</a><sup>*</sup>
-                <a href="#" class="author" target="_blank">Seoryeong Kim</a><sup>*</sup>
-                <a href="#" class="author" target="_blank">Jimin Lee</a>
-                <a href="#" class="author" target="_blank">Jehyuk Lee</a><sup>†</sup>
+                <a href="rhkdduf627@kookmin.ac.kr" class="author" target="_blank" aria-label="Author Gwangyeol Yu">Gwangyeol Yu</a><sup>*</sup>
+                <a href="jh2020@kookmin.ac.kr" class="author" target="_blank" aria-label="Author Junhyeok Lee">Junhyeok Lee</a><sup>*</sup>
+                <a href="tjfud0216@kookmin.ac.kr" class="author" target="_blank" aria-label="Author Seoryeong Kim">Seoryeong Kim</a><sup>*</sup>
+                <a href="dlwlals922@kookmin.ac.kr" class="author" target="_blank" aria-label="Author Jimin Lee">Jimin Lee</a>
+                <a href="jehyuk.lee@kookmin.ac.kr" class="author" target="_blank" aria-label="Author Jehyuk Lee">Jehyuk Lee</a><sup>†</sup>
             </div>
-            <div class="affiliation">Kookmin University, Seoul, South Korea</div>
-        </div>
+            <div class="affiliation">Kookmin University, Republic of Korea</div>
+        </header>
 
         <!-- Abstract Section -->
-        <div class="section">
-            <h2 class="section-title">Abstract</h2>
+        <section class="section" aria-labelledby="abstract-title">
+            <h2 class="section-title" id="abstract-title">Abstract</h2>
             <div class="abstract">
-                Voice conversion (VC) enables natural speech synthesis with minimal data however, it poses security risks, e.g., identity theft and privacy breaches. To address this, we propose Mimic Blocker, an active defense mechanism that prevents VC models from extracting speaker characteristics while preserving audio quality. Our method employs adversarial training, an audio quality preservation strategy, and an attack strategy. It relies on only publicly available pretrained feature extractors, which ensures model-agnostic protection. Furthermore, it enables self-supervised learning using only the original speaker's speech. Experimental results demonstrate that our method achieves robust defense performance in both white-box and black-box scenarios. Notably, the proposed approach maintains audio quality by generating noise imperceptible to human listeners, thereby enabling protection while retaining natural voice characteristics in practical applications.
+                Voice conversion (VC) enables natural speech synthesis with minimal data; however, it poses security risks, e.g., identity theft and privacy breaches. To address this, we propose Mimic Blocker, an active defense mechanism that prevents VC models from extracting speaker characteristics while preserving audio quality. Our method employs adversarial training, an audio quality preservation strategy, and an attack strategy. It relies on only publicly available pretrained feature extractors, which ensures model-agnostic protection. Furthermore, it enables self-supervised learning using only the original speaker's speech. Experimental results demonstrate that our method achieves robust defense performance in both white-box and black-box scenarios. Notably, the proposed approach maintains audio quality by generating noise imperceptible to human listeners, thereby enabling protection while retaining natural voice characteristics in practical applications.
             </div>
-        </div>
+        </section>
 
         <!-- Model Architecture Section -->
-        <div class="section">
-            <h2 class="section-title">Model Architecture</h2>
+        <section class="section" aria-labelledby="architecture-title">
+            <h2 class="section-title" id="architecture-title">Model Architecture</h2>
             <div class="image-container">
-                <img src="images/architecture.png" alt="Model Architecture" class="result-image">
+                <img src="images/architecture.png" alt="Diagram of Mimic Blocker model architecture showing training and testing stages with computational pathways" class="result-image">
             </div>
-            <p>Training and testing stage of Mimic Blocker. The red arrows represent the computational pathways used to calculate the loss
-                functions.</p>
-        </div>
+            <p>Training and testing stage of Mimic Blocker. The red arrows represent the computational pathways used to calculate the loss functions.</p>
+        </section>
+
         <!-- Audio Demos Section -->
-        <div class="section">
-            <h2 class="section-title">Audio Demos</h2>
+        <section class="section" aria-labelledby="demos-title">
+            <h2 class="section-title" id="demos-title">Audio Demos</h2>
             
             <h3 class="subsection-title">White Box</h3>
-            <table class="demo-table">
+            <table class="demo-table" aria-label="White Box Audio Samples">
                 <thead>
                     <tr>
-                        <th>Style WAV</th>
-                        <th>Org Output</th>
-                        <th>Adv WAV</th>
-                        <th>Adv Output</th>
+                        <th scope="col">Style Waveform</th>
+                        <th scope="col">Original Output</th>
+                        <th scope="col">Adversarial Waveform</th>
+                        <th scope="col">Adversarial Output</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>
                             <div class="demo-title">Sample 1</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 1 Style Waveform">
                                 <source src="./audio/WhiteBox/Sample1/p246_133_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 1</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 1 Original Output">
                                 <source src="./audio/WhiteBox/Sample1/p246_133_mic1_p284_330_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 1</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 1 Adversarial Waveform">
                                 <source src="./audio/WhiteBox/Sample1/noisy_p246_133_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 1</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 1 Adversarial Output">
                                 <source src="./audio/WhiteBox/Sample1/noisy_p246_133_mic1_p284_330_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <div class="demo-title">Sample 2</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 2 Style Waveform">
                                 <source src="./audio/WhiteBox/Sample2/p246_227_mic2.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 2</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 2 Original Output">
                                 <source src="./audio/WhiteBox/Sample2/p246_227_mic2_p305_245_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 2</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 2 Adversarial Waveform">
                                 <source src="./audio/WhiteBox/Sample2/noisy_p246_227_mic2.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 2</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 2 Adversarial Output">
                                 <source src="./audio/WhiteBox/Sample2/noisy_p246_227_mic2_p305_245_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <div class="demo-title">Sample 3</div>
-                            <audio class="audio-player" controls>
-                                <source src="./audio/WhiteBox/Sample3/noisy_p253_058_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                            <audio class="audio-player" controls aria-label="White Box Sample 3 Style Waveform">
+                                <source src="./audio/WhiteBox/Sample3/p253_058_mic1.wav" type="audio/wav">
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 3</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 3 Original Output">
                                 <source src="./audio/WhiteBox/Sample3/p253_058_mic1_p335_162_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 3</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 3 Adversarial Waveform">
                                 <source src="./audio/WhiteBox/Sample3/noisy_p253_058_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 3</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 3 Adversarial Output">
                                 <source src="./audio/WhiteBox/Sample3/noisy_p253_058_mic1_p335_162_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <div class="demo-title">Sample 4</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 4 Style Waveform">
                                 <source src="./audio/WhiteBox/Sample4/p253_161_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 4</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 4 Original Output">
                                 <source src="./audio/WhiteBox/Sample4/p253_161_mic1_p251_330_mic2.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 4</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 4 Adversarial Waveform">
                                 <source src="./audio/WhiteBox/Sample4/noisy_p253_161_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 4</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="White Box Sample 4 Adversarial Output">
                                 <source src="./audio/WhiteBox/Sample4/noisy_p253_161_mic1_p251_330_mic2.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                     </tr>
@@ -358,163 +491,168 @@
             </table>
 
             <h3 class="subsection-title">Black Box</h3>
-            <table class="demo-table">
+            <table class="demo-table" aria-label="Black Box Audio Samples">
                 <thead>
                     <tr>
-                        <th>Style WAV</th>
-                        <th>Org Output</th>
-                        <th>Adv WAV</th>
-                        <th>Adv Output</th>
+                        <th scope="col">Style Waveform</th>
+                        <th scope="col">Original Output</th>
+                        <th scope="col">Adversarial Waveform</th>
+                        <th scope="col">Adversarial Output</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>
                             <div class="demo-title">Sample 1</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 1 Style Waveform">
                                 <source src="./audio/BlackBox/Sample1/p246_295_mic2.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 1</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 1 Original Output">
                                 <source src="./audio/BlackBox/Sample1/p246_295_mic2_p298_344_mic2.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 1</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 1 Adversarial Waveform">
                                 <source src="./audio/BlackBox/Sample1/noisy_p246_295_mic2.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 1</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 1 Adversarial Output">
                                 <source src="./audio/BlackBox/Sample1/noisy_p246_295_mic2_p298_344_mic2.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <div class="demo-title">Sample 2</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 2 Style Waveform">
                                 <source src="./audio/BlackBox/Sample2/p251_174_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 2</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 2 Original Output">
                                 <source src="./audio/BlackBox/Sample2/p251_174_mic1_p253_141_mic2.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 2</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 2 Adversarial Waveform">
                                 <source src="./audio/BlackBox/Sample2/noisy_p251_174_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 2</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 2 Adversarial Output">
                                 <source src="./audio/BlackBox/Sample2/noisy_p251_174_mic1_p253_141_mic2.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <div class="demo-title">Sample 3</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 3 Style Waveform">
                                 <source src="./audio/BlackBox/Sample3/p282_058_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 3</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 3 Original Output">
                                 <source src="./audio/BlackBox/Sample3/p282_058_mic1_p246_258_mic2.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 3</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 3 Adversarial Waveform">
                                 <source src="./audio/BlackBox/Sample3/noisy_p282_058_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 3</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 3 Adversarial Output">
                                 <source src="./audio/BlackBox/Sample3/noisy_p282_058_mic1_p246_258_mic2.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <div class="demo-title">Sample 4</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 4 Style Waveform">
                                 <source src="./audio/BlackBox/Sample4/p269_207_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 4</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 4 Original Output">
                                 <source src="./audio/BlackBox/Sample4/p269_207_mic1_p298_085_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 4</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 4 Adversarial Waveform">
                                 <source src="./audio/BlackBox/Sample4/noisy_p269_207_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                         <td>
                             <div class="demo-title">Sample 4</div>
-                            <audio class="audio-player" controls>
+                            <audio class="audio-player" controls aria-label="Black Box Sample 4 Adversarial Output">
                                 <source src="./audio/BlackBox/Sample4/noisy_p269_207_mic1_p298_085_mic1.wav" type="audio/wav">
-                                Browser does not support audio.
+                                Your browser does not support the audio element.
                             </audio>
                         </td>
                     </tr>
                 </tbody>
             </table>
-        </div>
+        </section>
     </div>
 
     <!-- Footer -->
-    <div class="footer">
+    <footer class="footer" role="contentinfo">
         <div>
-            <a href="mailto:contact@example.com">Contact</a>
-            <a href="https://github.com/username/repo">GitHub</a>
-            <a href="https://arxiv.org/abs/example">arXiv</a>
+            <a href="https://github.com/yugwangyeol/Mimic-Blocker" aria-label="GitHub Repository">GitHub</a>
+            <a href="https://arxiv.org/abs/example" aria-label="arXiv Paper">arXiv</a>
         </div>
-    </div>
+    </footer>
 
     <script>
-        // Audio playback function
-        function playAudio(audioId) {
-            console.log(`Playing audio: ${audioId}`);
-        }
-
-        // Smooth scroll
+        // Smooth scroll for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
                 document.querySelector(this.getAttribute('href')).scrollIntoView({
                     behavior: 'smooth'
                 });
+            });
+        });
+
+        // Audio playback logging and animation
+        document.querySelectorAll('.audio-player').forEach(audio => {
+            audio.addEventListener('play', () => {
+                console.log(`Playing audio: ${audio.querySelector('source').src}`);
+                audio.classList.add('playing');
+            });
+            audio.addEventListener('pause', () => {
+                audio.classList.remove('playing');
             });
         });
     </script>
