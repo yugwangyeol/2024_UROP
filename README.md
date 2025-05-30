@@ -1,7 +1,6 @@
 # Mimic Blocker: Self-Supervised Adversarial Training for Voice Conversion Defense with Pretrained Feature Extractors
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-g.svg?style=flat-square)](https://opensource.org/licenses/MIT)
-[![arXiv](https://img.shields.io/badge/arXiv-1234.1234-b31b1b.svg?style=flat-square)]()
 [![LLaMA](https://img.shields.io/badge/Project_Page-MimicBlocekr-FFB000.svg?style=flat-square)](https://2junhyeok.github.io/MimicBlocker/)
 
 Official Implementation of the Interspeech 2025 paper Mimic Blocker: Self-Supervised Adversarial Training for Voice Conversion Defense with Pretrained Feature Extractors
